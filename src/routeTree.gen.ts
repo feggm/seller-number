@@ -13,7 +13,6 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as NoReservationImport } from './routes/no-reservation'
 import { Route as ConditionsImport } from './routes/conditions'
-import { Route as AboutImport } from './routes/about'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
@@ -27,12 +26,6 @@ const NoReservationRoute = NoReservationImport.update({
 const ConditionsRoute = ConditionsImport.update({
   id: '/conditions',
   path: '/conditions',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const AboutRoute = AboutImport.update({
-  id: '/about',
-  path: '/about',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -51,13 +44,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutImport
       parentRoute: typeof rootRoute
     }
     '/conditions': {
@@ -81,14 +67,12 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
 }
@@ -96,30 +80,27 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/conditions' | '/no-reservation'
+  fullPaths: '/' | '/conditions' | '/no-reservation'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/conditions' | '/no-reservation'
-  id: '__root__' | '/' | '/about' | '/conditions' | '/no-reservation'
+  to: '/' | '/conditions' | '/no-reservation'
+  id: '__root__' | '/' | '/conditions' | '/no-reservation'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
   ConditionsRoute: typeof ConditionsRoute
   NoReservationRoute: typeof NoReservationRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
   ConditionsRoute: ConditionsRoute,
   NoReservationRoute: NoReservationRoute,
 }
@@ -135,16 +116,12 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/about",
         "/conditions",
         "/no-reservation"
       ]
     },
     "/": {
       "filePath": "index.tsx"
-    },
-    "/about": {
-      "filePath": "about.tsx"
     },
     "/conditions": {
       "filePath": "conditions.tsx"
