@@ -1,3 +1,4 @@
 dist
 pb_data/types.d.ts
 pb_migrations
+src/routeTree.gen.ts

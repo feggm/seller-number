@@ -8,7 +8,7 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'pb_data/types.d.ts'] },
+  { ignores: ['dist', 'pb_data/types.d.ts', 'src/routeTree.gen.ts'] },
   {
     extends: [
       js.configs.recommended,
