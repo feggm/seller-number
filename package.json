@@ -12,9 +12,11 @@
     "start": "./pocketbase serve"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.0",
     "@tailwindcss/vite": "^4.1.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.6.5",
     "lucide-react": "^0.487.0",
     "pocketbase": "^0.25.2",
     "react": "^19.0.0",
