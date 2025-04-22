@@ -25,6 +25,7 @@ dist-ssr
 
 # Pocketbase
 pocketbase
+pocketbase.bin
 pocketbase.exe
 pocketbase.zip
 pb_data/
