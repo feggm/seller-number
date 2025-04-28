@@ -17,7 +17,7 @@ const getEventCategory = async (eventCategoryId: string) => {
   )
   return await withUrlResolving(eventCategory, {
     introTextUrl: 'introText',
-  } as const)
+  })
 }
 
 export const useEventCategoryQuery = (eventCategoryId: string) => {

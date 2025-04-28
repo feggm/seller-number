@@ -5,10 +5,22 @@ import { get } from 'lodash-es'
 type KeyableValue<TObject extends object> =
   TObject[keyof TObject] extends string ? TObject[keyof TObject] : never
 
+const stringify = (value: unknown) => {
+  if (typeof value === 'string') return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
 const resolveUrl = async (url: string) => {
   const hash = new URL(url).hash.slice(1)
-  const resultJson = (await fetch(url).then((res) => res.json())) as unknown
-  return String(get(resultJson, hash))
+  const fetchResult = await fetch(url)
+  const pickedValue = (
+    hash ? get(await fetchResult.json(), hash) : await fetchResult.text()
+  ) as unknown
+  return pickedValue ? stringify(pickedValue) : undefined
 }
 
 export const withUrlResolving = async <
@@ -29,6 +41,8 @@ export const withUrlResolving = async <
       if (typeof url !== 'string') return []
 
       const resolvedUrl = await resolveUrl(url)
+      if (resolvedUrl === undefined) return []
+
       return { [destinationField]: resolvedUrl }
     })
   )
