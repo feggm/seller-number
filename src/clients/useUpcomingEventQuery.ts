@@ -1,8 +1,9 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
-import { useQuery } from '@tanstack/react-query'
+import { UseQueryOptions, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
+import { withErrorLogging } from './withErrorLogging'
 
 const EventSchema = z.object({
   id: z.string(),
@@ -25,12 +26,15 @@ const getUpcomingEvent = async (eventCategoryId: string) => {
   )
 }
 
+export const upcomingEventQueryOptions = (eventCategoryId: string) =>
+  ({
+    queryKey: ['upcomingEvent', eventCategoryId],
+    queryFn: withErrorLogging(() => getUpcomingEvent(eventCategoryId)),
+    staleTime: Infinity,
+  }) satisfies UseQueryOptions
+
 export const useUpcomingEventQuery = () => {
   const eventCategoryId = useEventCategoryId()
 
-  return useQuery({
-    queryKey: ['upcomingEvent', eventCategoryId],
-    queryFn: () => getUpcomingEvent(eventCategoryId),
-    staleTime: Infinity,
-  })
+  return useQuery(upcomingEventQueryOptions(eventCategoryId))
 }

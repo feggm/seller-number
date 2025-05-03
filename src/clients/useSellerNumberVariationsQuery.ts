@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
+import { withErrorLogging } from './withErrorLogging'
 
 const SellerNumberVariationSchema = z.object({
   id: z.string(),
@@ -25,7 +26,7 @@ export const useSellerNumberVariationsQuery = () => {
 
   return useQuery({
     queryKey: ['sellerNumberVariations', eventCategoryId],
-    queryFn: () => getSellerNumberVariations(eventCategoryId),
+    queryFn: withErrorLogging(() => getSellerNumberVariations(eventCategoryId)),
     staleTime: Infinity,
   })
 }

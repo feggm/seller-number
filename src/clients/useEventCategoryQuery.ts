@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
+import { withErrorLogging } from './withErrorLogging'
 import { withUrlResolving } from './withUrlResolving'
 
 const EventCategorySchema = z.object({
@@ -30,7 +31,7 @@ export const useEventCategoryQuery = () => {
 
   return useQuery({
     queryKey: ['eventCategory', eventCategoryId],
-    queryFn: () => getEventCategory(eventCategoryId),
+    queryFn: withErrorLogging(() => getEventCategory(eventCategoryId)),
     enabled: !!eventCategoryId,
     staleTime: Infinity,
   })
