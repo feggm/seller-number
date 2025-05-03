@@ -1,4 +1,6 @@
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
+import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
+import { useUpcomingEventQuery } from '@/clients/useUpcomingEventQuery'
 import {
   IsLoadingProvider,
   LoadingSkeletonForGrandChildren,
@@ -17,6 +19,9 @@ function Index() {
 
   const { data, isLoading } = useEventCategoryQuery()
 
+  const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
+  const { data: upcomingEventData } = useUpcomingEventQuery()
+
   const introText = isLoading
     ? '<pre> </pre><pre> </pre><pre> </pre>'
     : (data?.introText ?? '')
@@ -31,6 +36,9 @@ function Index() {
             dangerouslySetInnerHTML={{ __html: introText }}
           ></div>
         </LoadingSkeletonForGrandChildren>
+
+        <pre>{JSON.stringify(sellerNumberVariationsData, null, 2)}</pre>
+        <pre>{JSON.stringify(upcomingEventData, null, 2)}</pre>
 
         <div className="flex flex-wrap gap-4 pt-2">
           <PageButton counter={0}>Verkäufernummer</PageButton>
