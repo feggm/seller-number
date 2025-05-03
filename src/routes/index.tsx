@@ -15,7 +15,7 @@ function Index() {
   const message =
     'Schade, es scheint weder normale Verkaufsnummern noch Babynummern mehr für dich zu geben. Vielleicht klappts ja beim Nächsten mal...'
 
-  const { data, isLoading } = useEventCategoryQuery('14oj16us9lza6h6')
+  const { data, isLoading } = useEventCategoryQuery()
 
   const introText = isLoading
     ? '<pre> </pre><pre> </pre><pre> </pre>'

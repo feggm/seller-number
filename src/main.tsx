@@ -3,6 +3,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { EventCategoryIdProvider } from './context/EventCategoryIdContext'
 import './index.css'
 import { routeTree } from './routeTree.gen'
 
@@ -27,7 +28,9 @@ if (!rootEl) {
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <EventCategoryIdProvider>
+        <RouterProvider router={router} />
+      </EventCategoryIdProvider>
     </QueryClientProvider>
   </StrictMode>
 )

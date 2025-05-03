@@ -1,3 +1,4 @@
+import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -13,7 +14,9 @@ const EventCategorySchema = z.object({
 
 const getEventCategory = async (eventCategoryId: string) => {
   const eventCategory = EventCategorySchema.parse(
-    await pb.collection('eventCategories').getOne(eventCategoryId)
+    await pb.collection('eventCategories').getOne(eventCategoryId, {
+      fields: Object.keys(EventCategorySchema.shape).join(','),
+    })
   )
   return await withUrlResolving(eventCategory, {
     resolverMap: {
@@ -22,7 +25,9 @@ const getEventCategory = async (eventCategoryId: string) => {
   })
 }
 
-export const useEventCategoryQuery = (eventCategoryId: string) => {
+export const useEventCategoryQuery = () => {
+  const eventCategoryId = useEventCategoryId()
+
   return useQuery({
     queryKey: ['eventCategory', eventCategoryId],
     queryFn: () => getEventCategory(eventCategoryId),
