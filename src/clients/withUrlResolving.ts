@@ -30,7 +30,13 @@ export const withUrlResolving = async <
   TReturn extends object = TData & TResolvedData,
 >(
   data: TData,
-  resolverMap: TResolverMap
+  {
+    resolverMap,
+    throwOnError,
+  }: {
+    resolverMap: TResolverMap
+    throwOnError?: boolean
+  }
 ): Promise<TReturn> => {
   const resolvedDataArray = await Promise.all(
     Object.entries(resolverMap).flatMap(async ([urlKey, destinationField]) => {
@@ -40,7 +46,11 @@ export const withUrlResolving = async <
       if (typeof destinationField !== 'string') return []
       if (typeof url !== 'string') return []
 
-      const resolvedUrl = await resolveUrl(url)
+      const resolvedUrl = await resolveUrl(url).catch(() =>
+        throwOnError
+          ? Promise.reject(new Error(`Failed to resolve URL: ${url}`))
+          : undefined
+      )
       if (resolvedUrl === undefined) return []
 
       return { [destinationField]: resolvedUrl }

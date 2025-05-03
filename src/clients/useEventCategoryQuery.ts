@@ -16,7 +16,9 @@ const getEventCategory = async (eventCategoryId: string) => {
     await pb.collection('eventCategories').getOne(eventCategoryId)
   )
   return await withUrlResolving(eventCategory, {
-    introTextUrl: 'introText',
+    resolverMap: {
+      introTextUrl: 'introText',
+    },
   })
 }
 
