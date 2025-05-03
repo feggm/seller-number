@@ -17,14 +17,14 @@ function Index() {
   const message =
     'Schade, es scheint weder normale Verkaufsnummern noch Babynummern mehr für dich zu geben. Vielleicht klappts ja beim Nächsten mal...'
 
-  const { data, isLoading } = useEventCategoryQuery()
+  const { data: eventCategoryData, isLoading } = useEventCategoryQuery()
 
   const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
   const { data: upcomingEventData } = useUpcomingEventQuery()
 
   const introText = isLoading
     ? '<pre> </pre><pre> </pre><pre> </pre>'
-    : (data?.introText ?? '')
+    : (eventCategoryData?.introText ?? '')
 
   return (
     <IsLoadingProvider isLoading={isLoading}>
