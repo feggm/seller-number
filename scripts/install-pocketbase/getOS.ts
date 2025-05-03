@@ -1,13 +1,18 @@
-export type OSString =
-  | 'darwin_amd64'
-  | 'darwin_arm64'
-  | 'linux_amd64'
-  | 'linux_arm64'
-  | 'linux_armv7'
-  | 'linux_ppc64le'
-  | 'linux_s390x'
-  | 'windows_amd64'
-  | 'windows_arm64'
+import { z } from 'zod'
+
+export const OSSchema = z.enum([
+  'darwin_amd64',
+  'darwin_arm64',
+  'linux_amd64',
+  'linux_arm64',
+  'linux_armv7',
+  'linux_ppc64le',
+  'linux_s390x',
+  'windows_amd64',
+  'windows_arm64',
+])
+
+export type OSString = z.infer<typeof OSSchema>
 
 export const getOS = (): OSString => {
   const platform = process.platform
