@@ -1,6 +1,7 @@
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
+import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
 import { useUpcomingEventQuery } from '@/clients/useUpcomingEventQuery'
 import {
   IsLoadingProvider,
@@ -23,6 +24,7 @@ function Index() {
   const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
   const { data: upcomingEventData } = useUpcomingEventQuery()
   const { data: sellerNumberPoolsData } = useSellerNumberPoolsQuery()
+  const { data: sellerNumbers } = useSellerNumbersQuery()
 
   const introText = isLoading
     ? '<pre> </pre><pre> </pre><pre> </pre>'
@@ -42,6 +44,7 @@ function Index() {
         <pre>{JSON.stringify(sellerNumberVariationsData, null, 2)}</pre>
         <pre>{JSON.stringify(upcomingEventData, null, 2)}</pre>
         <pre>{JSON.stringify(sellerNumberPoolsData, null, 2)}</pre>
+        <pre>{JSON.stringify(sellerNumbers, null, 2)}</pre>
 
         <div className="flex flex-wrap gap-4 pt-2">
           <PageButton counter={0}>Verkäufernummer</PageButton>
