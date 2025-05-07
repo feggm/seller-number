@@ -2,6 +2,8 @@
 import { isKeyOf } from '@/lib/isKeyOf'
 import { get } from 'lodash-es'
 
+import { pb } from './pocketbase'
+
 type KeyableValue<TObject extends object> =
   TObject[keyof TObject] extends string ? TObject[keyof TObject] : never
 
@@ -16,10 +18,10 @@ const stringify = (value: unknown) => {
 
 const resolveUrl = async (url: string) => {
   const hash = new URL(url).hash.slice(1)
-  const fetchResult = await fetch(url)
-  const pickedValue = (
-    hash ? get(await fetchResult.json(), hash) : await fetchResult.text()
-  ) as unknown
+  const fetchResult = await pb.send<unknown>('/api/seller-number/cors-proxy', {
+    query: { url },
+  })
+  const pickedValue = (hash ? get(fetchResult, hash) : fetchResult) as unknown
   return pickedValue ? stringify(pickedValue) : undefined
 }
 
