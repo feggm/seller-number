@@ -7,7 +7,7 @@ import { pb } from './pocketbase'
 import { upcomingEventQueryOptions } from './useUpcomingEventQuery'
 import { withErrorLogging } from './withErrorLogging'
 
-const NumberSchema = z.union([
+const NumberDataSchema = z.union([
   z.number().min(0),
   z.object({
     from: z.number().min(0),
@@ -15,13 +15,30 @@ const NumberSchema = z.union([
   }),
 ])
 
+type NumberData = z.infer<typeof NumberDataSchema>
+
 const SellerNumberPoolSchema = z.object({
   id: z.string(),
   sellerNumberVariation: z.string(),
   obtainableFrom: z.coerce.date().optional().catch(undefined),
   obtainableTo: z.coerce.date().optional().catch(undefined),
-  numbers: gracefulArray(NumberSchema),
+  numbers: gracefulArray(NumberDataSchema),
 })
+
+const resolveNumbers = (numberDatas: NumberData[]) => [
+  ...new Set(
+    numberDatas.flatMap((numberData) =>
+      typeof numberData === 'number'
+        ? numberData
+        : [
+            ...Array.from(
+              { length: numberData.to - numberData.from + 1 },
+              (_, i) => numberData.from + i
+            ),
+          ]
+    )
+  ),
+]
 
 const getSellerNumberPools = async (
   eventCategoryId: string,
@@ -30,25 +47,43 @@ const getSellerNumberPools = async (
   const { id: eventId } = await queryClient.fetchQuery(
     upcomingEventQueryOptions(eventCategoryId)
   )
-  return SellerNumberPoolSchema.array().parse(
-    await pb.collection('sellerNumberPools').getFullList({
-      filter: pb.filter('event = {:eventId}', {
-        eventId,
-      }),
-      fields: Object.keys(SellerNumberPoolSchema.shape).join(','),
-    })
-  )
+  return SellerNumberPoolSchema.array()
+    .parse(
+      await pb.collection('sellerNumberPools').getFullList({
+        filter: pb.filter('event = {:eventId}', {
+          eventId,
+        }),
+        fields: Object.keys(SellerNumberPoolSchema.shape).join(','),
+      })
+    )
+    .map((sellerNumberPool) => ({
+      ...sellerNumberPool,
+      resolvedNumbers: resolveNumbers(sellerNumberPool.numbers),
+    }))
 }
+
+export const sellerNumberPoolsQueryOptions = ({
+  eventCategoryId,
+  queryClient,
+}: {
+  eventCategoryId: string
+  queryClient: QueryClient
+}) => ({
+  queryKey: ['sellerNumberPools', eventCategoryId],
+  queryFn: withErrorLogging(() =>
+    getSellerNumberPools(eventCategoryId, queryClient)
+  ),
+  staleTime: Infinity,
+})
 
 export const useSellerNumberPoolsQuery = () => {
   const eventCategoryId = useEventCategoryId()
   const queryClient = useQueryClient()
 
-  return useQuery({
-    queryKey: ['sellerNumberPools', eventCategoryId],
-    queryFn: withErrorLogging(() =>
-      getSellerNumberPools(eventCategoryId, queryClient)
-    ),
-    staleTime: Infinity,
-  })
+  return useQuery(
+    sellerNumberPoolsQueryOptions({
+      eventCategoryId,
+      queryClient,
+    })
+  )
 }
