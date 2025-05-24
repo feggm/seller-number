@@ -2,7 +2,6 @@ import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
 import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
-import { useUpcomingEventQuery } from '@/clients/useUpcomingEventQuery'
 import {
   IsLoadingProvider,
   LoadingSkeletonForGrandChildren,
@@ -20,15 +19,32 @@ function Index() {
     'Schade, es scheint weder normale Verkaufsnummern noch Babynummern mehr für dich zu geben. Vielleicht klappts ja beim Nächsten mal...'
 
   const { data: eventCategoryData, isLoading } = useEventCategoryQuery()
-
   const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
-  const { data: upcomingEventData } = useUpcomingEventQuery()
   const { data: sellerNumberPoolsData } = useSellerNumberPoolsQuery()
-  const { data: sellerNumbers } = useSellerNumbersQuery()
+  const { dataWithComputedFields: sellerNumbers } = useSellerNumbersQuery()
 
   const introText = isLoading
     ? '<pre> </pre><pre> </pre><pre> </pre>'
     : (eventCategoryData?.introText ?? '')
+
+  const variationsButtonData = sellerNumberVariationsData?.map(
+    (variationData) => ({
+      ...variationData,
+      obtainableCount:
+        sellerNumberPoolsData
+          ?.filter((pool) => pool.sellerNumberVariation === variationData.id)
+          .reduce(
+            (count, pool) =>
+              count +
+              pool.resolvedNumbers.length -
+              (sellerNumbers?.filter(
+                ({ isObtainable, sellerNumberPool }) =>
+                  !isObtainable && sellerNumberPool === pool.id
+              ).length ?? 0),
+            0
+          ) ?? 0,
+    })
+  )
 
   return (
     <IsLoadingProvider isLoading={isLoading}>
@@ -41,14 +57,15 @@ function Index() {
           ></div>
         </LoadingSkeletonForGrandChildren>
 
-        <pre>{JSON.stringify(sellerNumberVariationsData, null, 2)}</pre>
-        <pre>{JSON.stringify(upcomingEventData, null, 2)}</pre>
-        <pre>{JSON.stringify(sellerNumberPoolsData, null, 2)}</pre>
-        <pre>{JSON.stringify(sellerNumbers, null, 2)}</pre>
-
         <div className="flex flex-wrap gap-4 pt-2">
-          <PageButton counter={0}>Verkäufernummer</PageButton>
-          <PageButton counter={0}>Babynummer</PageButton>
+          {!!variationsButtonData &&
+            variationsButtonData.map(
+              ({ id, obtainableCount, sellerNumberVariationName }) => (
+                <PageButton key={id} counter={obtainableCount}>
+                  {sellerNumberVariationName}
+                </PageButton>
+              )
+            )}
         </div>
 
         <div className="mt-6 pt-6 border-t border-slate-100">

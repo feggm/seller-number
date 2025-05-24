@@ -1,8 +1,11 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
+import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
+import { useEventCategoryQuery } from './useEventCategoryQuery'
 import { sellerNumberPoolsQueryOptions } from './useSellerNumberPoolsQuery'
 import { withErrorLogging } from './withErrorLogging'
 
@@ -47,8 +50,10 @@ const getSellerNumbers = async ({
 export const useSellerNumbersQuery = () => {
   const eventCategoryId = useEventCategoryId()
   const queryClient = useQueryClient()
+  const { getTimeDiff } = useCurrentTime()
+  const { data: eventCategoryData } = useEventCategoryQuery()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['realtime', 'sellerNumbers', eventCategoryId],
     queryFn: withErrorLogging(() =>
       getSellerNumbers({
@@ -57,5 +62,23 @@ export const useSellerNumbersQuery = () => {
       })
     ),
     staleTime: Infinity,
+  })
+
+  return Object.assign(query, {
+    dataWithComputedFields: useMemo(
+      () =>
+        query.data?.map((sellerNumber) => ({
+          ...sellerNumber,
+          isObtainable: (() => {
+            const isReserved =
+              !!sellerNumber.reservedAt &&
+              !!eventCategoryData?.sessionTimeInSec &&
+              getTimeDiff(sellerNumber.reservedAt).seconds >
+                -eventCategoryData.sessionTimeInSec
+            return !isReserved && !sellerNumber.sellerDetails
+          })(),
+        })),
+      [eventCategoryData, getTimeDiff, query.data]
+    ),
   })
 }
