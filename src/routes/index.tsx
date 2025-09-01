@@ -8,7 +8,7 @@ import {
 } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -46,6 +46,8 @@ function Index() {
     })
   )
 
+  const navigate = useNavigate()
+
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
@@ -61,7 +63,16 @@ function Index() {
           {!!variationsButtonData &&
             variationsButtonData.map(
               ({ id, obtainableCount, sellerNumberVariationName }) => (
-                <PageButton key={id} counter={obtainableCount}>
+                <PageButton
+                  key={id}
+                  counter={obtainableCount}
+                  onClick={() =>
+                    void navigate({
+                      to: '/variation/$sellerNumberVariation/conditions',
+                      params: { sellerNumberVariation: id },
+                    })
+                  }
+                >
                   {sellerNumberVariationName}
                 </PageButton>
               )
