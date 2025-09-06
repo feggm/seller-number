@@ -1,5 +1,9 @@
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
 import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
+import {
+  IsLoadingProvider,
+  LoadingSkeleton,
+} from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
 import { ProseText } from '@/components/ProseText'
@@ -25,10 +29,6 @@ function RouteComponent() {
     (number) => number.id === sellerNumberId
   )
 
-  if (!sellerNumberVariation || !sellerNumber) {
-    return <div>Variation oder Verkäufernummer nicht gefunden</div>
-  }
-
   const timeLeft = {
     minutes: 10,
     seconds: 30,
@@ -40,17 +40,23 @@ function RouteComponent() {
     <PageCard
       title="Verkäuferinformationen"
       titleBarSuffix={
-        <div className="text-xs whitespace-pre text-right">
-          <span className="inline-block w-3 h-3 bg-white rounded-full animate-pulse"></span>
-          Sitzung endet: {timeLeft.minutes}m {timeLeft.seconds}s
-        </div>
+        <IsLoadingProvider isLoading={!sellerNumber}>
+          <div className="text-xs whitespace-pre text-right">
+            <LoadingSkeleton>
+              <span className="inline-block w-3 h-3 bg-white rounded-full animate-pulse"></span>
+              Sitzung endet: {timeLeft.minutes}m {timeLeft.seconds}s
+            </LoadingSkeleton>
+          </div>
+        </IsLoadingProvider>
       }
     >
-      <ProseText text={sellerNumberVariation.conditionsText} />
+      <IsLoadingProvider isLoading={!sellerNumberVariation}>
+        <ProseText text={sellerNumberVariation?.conditionsText} />
 
-      <div className="flex justify-center pt-4">
-        <PageButton onClick={handleAccept}>AKZEPTIEREN UND WEITER</PageButton>
-      </div>
+        <div className="flex justify-center pt-4">
+          <PageButton onClick={handleAccept}>AKZEPTIEREN UND WEITER</PageButton>
+        </div>
+      </IsLoadingProvider>
     </PageCard>
   )
 }

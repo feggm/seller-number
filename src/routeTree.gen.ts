@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as NoReservationImport } from './routes/no-reservation'
-import { Route as ConditionsImport } from './routes/conditions'
 import { Route as IndexImport } from './routes/index'
 import { Route as VariationVariationIdSellerNumberSellerNumberConditionsImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/conditions'
 
@@ -21,12 +20,6 @@ import { Route as VariationVariationIdSellerNumberSellerNumberConditionsImport }
 const NoReservationRoute = NoReservationImport.update({
   id: '/no-reservation',
   path: '/no-reservation',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const ConditionsRoute = ConditionsImport.update({
-  id: '/conditions',
-  path: '/conditions',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -54,13 +47,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/conditions': {
-      id: '/conditions'
-      path: '/conditions'
-      fullPath: '/conditions'
-      preLoaderRoute: typeof ConditionsImport
-      parentRoute: typeof rootRoute
-    }
     '/no-reservation': {
       id: '/no-reservation'
       path: '/no-reservation'
@@ -82,14 +68,12 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
 }
@@ -97,7 +81,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/conditions': typeof ConditionsRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
 }
@@ -106,19 +89,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/conditions'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/conditions'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
   id:
     | '__root__'
     | '/'
-    | '/conditions'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
   fileRoutesById: FileRoutesById
@@ -126,14 +106,12 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ConditionsRoute: typeof ConditionsRoute
   NoReservationRoute: typeof NoReservationRoute
   VariationVariationIdSellerNumberSellerNumberConditionsRoute: typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ConditionsRoute: ConditionsRoute,
   NoReservationRoute: NoReservationRoute,
   VariationVariationIdSellerNumberSellerNumberConditionsRoute:
     VariationVariationIdSellerNumberSellerNumberConditionsRoute,
@@ -150,16 +128,12 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/conditions",
         "/no-reservation",
         "/variation/$variationId/sellerNumber/$sellerNumber/conditions"
       ]
     },
     "/": {
       "filePath": "index.tsx"
-    },
-    "/conditions": {
-      "filePath": "conditions.tsx"
     },
     "/no-reservation": {
       "filePath": "no-reservation.tsx"
