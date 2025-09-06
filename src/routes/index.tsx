@@ -1,3 +1,4 @@
+import { pb } from '@/clients/pocketbase'
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
@@ -8,6 +9,7 @@ import {
 } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
+import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
@@ -15,9 +17,6 @@ export const Route = createFileRoute('/')({
 })
 
 function Index() {
-  const message =
-    'Schade, es scheint weder normale Verkaufsnummern noch Babynummern mehr für dich zu geben. Vielleicht klappts ja beim Nächsten mal...'
-
   const { data: eventCategoryData, isLoading } = useEventCategoryQuery()
   const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
   const { data: sellerNumberPoolsData } = useSellerNumberPoolsQuery()
@@ -28,29 +27,43 @@ function Index() {
     : (eventCategoryData?.introText ?? '')
 
   const variationsButtonData = sellerNumberVariationsData?.map(
-    (variationData) => ({
-      ...variationData,
-      obtainableCount:
-        sellerNumberPoolsData
-          ?.filter((pool) => pool.sellerNumberVariation === variationData.id)
-          .reduce(
-            (count, pool) =>
-              count +
-              pool.resolvedNumbers.length -
-              (sellerNumbers?.filter(
-                ({ isObtainable, sellerNumberPool }) =>
-                  !isObtainable && sellerNumberPool === pool.id
-              ).length ?? 0),
-            0
-          ) ?? 0,
-    })
+    (variationData) => {
+      const obtainableNumbers = sellerNumberPoolsData
+        ?.filter((pool) => pool.sellerNumberVariation === variationData.id)
+        .reduce(
+          (numbers, pool) => [
+            ...numbers,
+            ...pool.resolvedNumbers.filter((resolvedNumber) => {
+              const sellerNumber = sellerNumbers?.find(
+                ({ sellerNumberNumber, sellerNumberPool }) =>
+                  sellerNumberNumber === resolvedNumber &&
+                  sellerNumberPool === pool.id
+              )
+              return !sellerNumber || sellerNumber.isObtainable
+            }),
+          ],
+          [] as number[]
+        )
+      return {
+        ...variationData,
+        obtainableNumbers,
+        obtainableCount: obtainableNumbers?.length ?? 0,
+      }
+    }
   )
 
   const navigate = useNavigate()
+  // const { mutateAsync: reserveSellerNumber } = useMutation({
+  //   mutationFn: async (sellerNumberVariationId: string) => {
+  //     pb.collection('sellerNumbers')
+  //     console.log('Reserving seller number variation:', sellerNumberVariationId)
+  //   },
+  // })
 
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
+        {/*<pre>{JSON.stringify(sellerNumberPoolsData, null, 2)}</pre>*/}
         <LoadingSkeletonForGrandChildren>
           <div
             className="text-slate-700 leading-relaxed space-y-4"
@@ -66,21 +79,21 @@ function Index() {
                 <PageButton
                   key={id}
                   counter={obtainableCount}
-                  onClick={() =>
-                    void navigate({
-                      to: '/variation/$sellerNumberVariation/conditions',
-                      params: { sellerNumberVariation: id },
-                    })
-                  }
+                  disabled={!obtainableCount}
+                  onClick={() => {
+                    void (async () => {
+                      // await reserveSellerNumber(id)
+                      void navigate({
+                        to: '/variation/$sellerNumberVariation/conditions',
+                        params: { sellerNumberVariation: id },
+                      })
+                    })()
+                  }}
                 >
                   {sellerNumberVariationName}
                 </PageButton>
               )
             )}
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-slate-100">
-          <p className="text-slate-600 italic">{message}</p>
         </div>
       </PageCard>
     </IsLoadingProvider>
