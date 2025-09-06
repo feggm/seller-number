@@ -1,4 +1,3 @@
-import { pb } from '@/clients/pocketbase'
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
@@ -9,7 +8,6 @@ import {
 } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
-import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
@@ -83,7 +81,7 @@ function Index() {
                   onClick={() => {
                     void (async () => {
                       // await reserveSellerNumber(id)
-                      void navigate({
+                      await navigate({
                         to: '/variation/$sellerNumberVariation/conditions',
                         params: { sellerNumberVariation: id },
                       })
