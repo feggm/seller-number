@@ -39,6 +39,7 @@ export default tseslint.config(
       ],
       ...reactX.configs['recommended-typescript'].rules,
       ...reactDom.configs.recommended.rules,
+      '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
     },
   },
   eslintConfigPrettier
