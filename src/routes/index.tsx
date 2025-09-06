@@ -1,13 +1,12 @@
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
+import { useSellerNumberReservationMutation } from '@/clients/useSellerNumberReservationMutation'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
 import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
-import {
-  IsLoadingProvider,
-  LoadingSkeletonForGrandChildren,
-} from '@/components/LoadingSkeleton'
+import { IsLoadingProvider } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
+import { ProseText } from '@/components/ProseText'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
@@ -51,24 +50,13 @@ function Index() {
   )
 
   const navigate = useNavigate()
-  // const { mutateAsync: reserveSellerNumber } = useMutation({
-  //   mutationFn: async (sellerNumberVariationId: string) => {
-  //     pb.collection('sellerNumbers')
-  //     console.log('Reserving seller number variation:', sellerNumberVariationId)
-  //   },
-  // })
+  const reserveMutation = useSellerNumberReservationMutation()
 
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
         {/*<pre>{JSON.stringify(sellerNumberPoolsData, null, 2)}</pre>*/}
-        <LoadingSkeletonForGrandChildren>
-          <div
-            className="text-slate-700 leading-relaxed space-y-4"
-            // eslint-disable-next-line react-dom/no-dangerously-set-innerhtml
-            dangerouslySetInnerHTML={{ __html: introText }}
-          ></div>
-        </LoadingSkeletonForGrandChildren>
+        <ProseText text={introText} />
 
         <div className="flex flex-wrap gap-4 pt-2">
           {!!variationsButtonData &&
@@ -78,12 +66,22 @@ function Index() {
                   key={id}
                   counter={obtainableCount}
                   disabled={!obtainableCount}
+                  isLoading={
+                    reserveMutation.isPending &&
+                    reserveMutation.variables.sellerNumberVariationId === id
+                  }
                   onClick={() => {
                     void (async () => {
-                      // await reserveSellerNumber(id)
+                      const { sellerNumberId } =
+                        await reserveMutation.mutateAsync({
+                          sellerNumberVariationId: 'id',
+                        })
                       await navigate({
-                        to: '/variation/$sellerNumberVariation/conditions',
-                        params: { sellerNumberVariation: id },
+                        to: '/variation/$variationId/sellerNumber/$sellerNumber/conditions',
+                        params: {
+                          sellerNumber: sellerNumberId,
+                          variationId: id,
+                        },
                       })
                     })()
                   }}

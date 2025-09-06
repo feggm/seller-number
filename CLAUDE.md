@@ -143,6 +143,76 @@ curl -X POST http://localhost:8090/api/seller-number/reservation \
   -d '{"sellerNumberVariationId": "your_id_here"}'
 ```
 
+## Frontend Client Patterns
+
+### Query Structure (TanStack Query)
+All query files follow this pattern:
+```typescript
+// 1. Define Zod schemas for validation
+const DataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+
+// 2. API function with error logging
+const getData = async (params: string) => {
+  return DataSchema.parse(
+    await pb.collection('collection').getFullList({
+      filter: pb.filter('field = {:param}', { param: params }),
+      fields: Object.keys(DataSchema.shape).join(','),
+    })
+  )
+}
+
+// 3. Hook with query options
+export const useDataQuery = () => {
+  return useQuery({
+    queryKey: ['data', params],
+    queryFn: withErrorLogging(() => getData(params)),
+    staleTime: Infinity,
+  })
+}
+```
+
+### Mutation Structure (TanStack Query)
+For custom API endpoints (like reservation):
+```typescript
+// 1. Define request/response schemas
+const RequestSchema = z.object({
+  field: z.string(),
+})
+
+const ResponseSchema = z.object({
+  result: z.string(),
+})
+
+// 2. API function using pb.send
+const apiCall = async (request: z.infer<typeof RequestSchema>) => {
+  const validatedRequest = RequestSchema.parse(request)
+  
+  const response = await pb.send<unknown>('/api/custom/endpoint', {
+    method: 'POST',
+    body: validatedRequest,
+  })
+
+  return ResponseSchema.parse(response)
+}
+
+// 3. Mutation hook
+export const useApiMutation = () => {
+  return useMutation({
+    mutationFn: withErrorLogging(apiCall),
+  })
+}
+```
+
+### API Call Best Practices
+- **Use `pb.send<unknown>`** for custom endpoints (not typed generics)
+- **Always validate** with Zod schemas on both request and response
+- **Use `withErrorLogging`** wrapper for consistent error handling
+- **Use `pb.collection()`** for standard CRUD operations  
+- **Use `pb.send()`** for custom hook endpoints
+
 ## Common Issues & Solutions
 
 1. **"Object has no member 'dao'"** → Use `$app.findRecordById()` instead of `$app.dao()`

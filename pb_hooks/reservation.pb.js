@@ -11,49 +11,66 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
 
   try {
     // Get the seller number variation
-    const sellerNumberVariation = $app.findRecordById(
-      'sellerNumberVariations',
-      sellerNumberVariationId
-    )
-    if (!sellerNumberVariation) {
+    let sellerNumberVariation
+    try {
+      sellerNumberVariation = $app.findRecordById(
+        'sellerNumberVariations',
+        sellerNumberVariationId
+      )
+    } catch (error) {
       return e.json(404, { error: 'Seller number variation not found' })
     }
 
     // Get the event category from the variation
-    const eventCategory = $app.findRecordById(
-      'eventCategories',
-      sellerNumberVariation.get('eventCategory')
-    )
-    if (!eventCategory) {
+    let eventCategory
+    try {
+      eventCategory = $app.findRecordById(
+        'eventCategories',
+        sellerNumberVariation.get('eventCategory')
+      )
+    } catch (error) {
       return e.json(404, { error: 'Event category not found' })
     }
 
     // Find the upcoming event for this category
-    const events = $app.findRecordsByFilter(
-      'events',
-      'eventCategory = {:eventCategoryId} && eventDate > {:now}',
-      '-eventDate',
-      1,
-      0,
-      {
-        eventCategoryId: eventCategory.get('id'),
-        now: new Date().toISOString(),
-      }
-    )
+    let events
+    try {
+      events = $app.findRecordsByFilter(
+        'events',
+        'eventCategory = {:eventCategoryId} && eventDate > {:now}',
+        '-eventDate',
+        1,
+        0,
+        {
+          eventCategoryId: eventCategory.get('id'),
+          now: new Date().toISOString(),
+        }
+      )
+    } catch (error) {
+      return e.json(404, { error: 'No upcoming event found' })
+    }
+
     const event = events.length > 0 ? events[0] : null
     if (!event) {
       return e.json(404, { error: 'No upcoming event found' })
     }
 
     // Get all seller number pools for this variation and event
-    const sellerNumberPools = $app.findRecordsByFilter(
-      'sellerNumberPools',
-      'sellerNumberVariation = {:sellerNumberVariationId} && event = {:eventId}',
-      '',
-      0,
-      0,
-      { sellerNumberVariationId, eventId: event.get('id') }
-    )
+    let sellerNumberPools
+    try {
+      sellerNumberPools = $app.findRecordsByFilter(
+        'sellerNumberPools',
+        'sellerNumberVariation = {:sellerNumberVariationId} && event = {:eventId}',
+        '',
+        0,
+        0,
+        { sellerNumberVariationId, eventId: event.get('id') }
+      )
+    } catch (error) {
+      return e.json(404, {
+        error: 'No seller number pools found for this variation',
+      })
+    }
 
     if (!sellerNumberPools || sellerNumberPools.length === 0) {
       return e.json(404, {
@@ -64,10 +81,22 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
     // Function to resolve numbers from pool data
     const resolveNumbers = (numberDatas) => {
       const resolved = []
+
+      // Handle null, undefined, or non-array values
+      if (!numberDatas || !Array.isArray(numberDatas)) {
+        console.log('Invalid numberDatas:', numberDatas)
+        return []
+      }
+
       for (const numberData of numberDatas) {
         if (typeof numberData === 'number') {
           resolved.push(numberData)
-        } else if (numberData.from && numberData.to) {
+        } else if (
+          numberData &&
+          typeof numberData === 'object' &&
+          numberData.from &&
+          numberData.to
+        ) {
           for (let i = numberData.from; i <= numberData.to; i++) {
             resolved.push(i)
           }
@@ -78,18 +107,23 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
 
     // Get all existing seller numbers for these pools
     const poolIds = sellerNumberPools.map((pool) => pool.get('id'))
-    const existingSellerNumbers =
-      poolIds.length > 0
-        ? $app.findRecordsByFilter(
-            'sellerNumbers',
-            'sellerNumberPool = "' +
-              poolIds.join('" || sellerNumberPool = "') +
-              '"',
-            '',
-            0,
-            0
-          )
-        : []
+    let existingSellerNumbers = []
+    if (poolIds.length > 0) {
+      try {
+        existingSellerNumbers = $app.findRecordsByFilter(
+          'sellerNumbers',
+          'sellerNumberPool = "' +
+            poolIds.join('" || sellerNumberPool = "') +
+            '"',
+          '',
+          0,
+          0
+        )
+      } catch (error) {
+        // No existing seller numbers found, continue with empty array
+        existingSellerNumbers = []
+      }
+    }
 
     // Find all obtainable numbers
     const obtainableNumbers = []
@@ -163,7 +197,6 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
 
     return e.json(200, { sellerNumberId: sellerNumberRecord.get('id') })
   } catch (error) {
-    console.error('Error in reservation endpoint', error)
     $app.logger().error('Error in reservation endpoint', 'error', error)
     return e.json(500, {
       error: 'Internal server error',

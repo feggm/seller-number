@@ -1,21 +1,33 @@
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
+import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
+import { ProseText } from '@/components/ProseText'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute(
-  '/variation/$sellerNumberVariation/conditions'
+  '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
 )({
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const { sellerNumberVariation: sellerNumberVariationId } = Route.useParams()
+  const { variationId: sellerNumberVariationId, sellerNumber: sellerNumberId } =
+    Route.useParams()
 
   const { data: sellerNumberVariations } = useSellerNumberVariationsQuery()
   const sellerNumberVariation = sellerNumberVariations?.find(
     (variation) => variation.id === sellerNumberVariationId
   )
+
+  const { data: sellerNumbers } = useSellerNumbersQuery()
+  const sellerNumber = sellerNumbers?.find(
+    (number) => number.id === sellerNumberId
+  )
+
+  if (!sellerNumberVariation || !sellerNumber) {
+    return <div>Variation oder Verkäufernummer nicht gefunden</div>
+  }
 
   const timeLeft = {
     minutes: 10,
@@ -34,15 +46,7 @@ function RouteComponent() {
         </div>
       }
     >
-      <div className="text-slate-700 leading-relaxed">
-        <div
-          className="prose max-w-prose"
-          // eslint-disable-next-line react-dom/no-dangerously-set-innerhtml
-          dangerouslySetInnerHTML={{
-            __html: sellerNumberVariation?.conditionsText ?? '',
-          }}
-        />
-      </div>
+      <ProseText text={sellerNumberVariation.conditionsText} />
 
       <div className="flex justify-center pt-4">
         <PageButton onClick={handleAccept}>AKZEPTIEREN UND WEITER</PageButton>
