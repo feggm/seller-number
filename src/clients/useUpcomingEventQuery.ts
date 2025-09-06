@@ -1,4 +1,5 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
+import { queryClient } from '@/lib/queryClient'
 import { UseQueryOptions, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -32,6 +33,10 @@ export const upcomingEventQueryOptions = (eventCategoryId: string) =>
     queryFn: withErrorLogging(() => getUpcomingEvent(eventCategoryId)),
     staleTime: Infinity,
   }) satisfies UseQueryOptions
+
+void pb.collection('events').subscribe('*', () => {
+  void queryClient.invalidateQueries({ queryKey: ['upcomingEvent'] })
+})
 
 export const useUpcomingEventQuery = () => {
   const eventCategoryId = useEventCategoryId()

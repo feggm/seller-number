@@ -1,4 +1,5 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
+import { queryClient } from '@/lib/queryClient'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -43,3 +44,7 @@ export const useSellerNumberVariationsQuery = () => {
     staleTime: Infinity,
   })
 }
+
+void pb.collection('sellerNumberVariations').subscribe('*', () => {
+  void queryClient.invalidateQueries({ queryKey: ['sellerNumberVariations'] })
+})

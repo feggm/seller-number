@@ -1,4 +1,5 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
+import { queryClient } from '@/lib/queryClient'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -37,3 +38,7 @@ export const useEventCategoryQuery = () => {
     staleTime: Infinity,
   })
 }
+
+void pb.collection('eventCategories').subscribe('*', ({ record }) => {
+  void queryClient.invalidateQueries({ queryKey: ['eventCategory', record.id] })
+})

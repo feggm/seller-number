@@ -1,5 +1,6 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { useCurrentTime } from '@/hooks/useCurrentTime'
+import { queryClient } from '@/lib/queryClient'
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { z } from 'zod'
@@ -54,7 +55,7 @@ export const useSellerNumbersQuery = () => {
   const { data: eventCategoryData } = useEventCategoryQuery()
 
   const query = useQuery({
-    queryKey: ['realtime', 'sellerNumbers', eventCategoryId],
+    queryKey: ['sellerNumbers', eventCategoryId],
     queryFn: withErrorLogging(() =>
       getSellerNumbers({
         eventCategoryId,
@@ -82,3 +83,9 @@ export const useSellerNumbersQuery = () => {
     ),
   })
 }
+
+void pb.collection('sellerNumbers').subscribe('*', () => {
+  void queryClient.invalidateQueries({
+    queryKey: ['sellerNumbers'],
+  })
+})

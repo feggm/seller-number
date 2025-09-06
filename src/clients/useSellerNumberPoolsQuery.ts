@@ -1,5 +1,6 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { gracefulArray } from '@/lib/gracefulArray'
+import { queryClient } from '@/lib/queryClient'
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -74,6 +75,12 @@ export const sellerNumberPoolsQueryOptions = ({
     getSellerNumberPools(eventCategoryId, queryClient)
   ),
   staleTime: Infinity,
+})
+
+void pb.collection('sellerNumberPools').subscribe('*', () => {
+  void queryClient.invalidateQueries({
+    queryKey: ['sellerNumberPools'],
+  })
 })
 
 export const useSellerNumberPoolsQuery = () => {
