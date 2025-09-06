@@ -8,12 +8,21 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as NoReservationImport } from './routes/no-reservation'
 import { Route as IndexImport } from './routes/index'
-import { Route as VariationVariationIdSellerNumberSellerNumberConditionsImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/conditions'
+import { Route as VariationVariationIdSellerNumberSellerNumberWithSessionCounterImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter'
+import { Route as VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter/conditions'
+
+// Create Virtual Routes
+
+const VariationVariationIdSellerNumberSellerNumberImport = createFileRoute(
+  '/variation/$variationId/sellerNumber/$sellerNumber',
+)()
 
 // Create/Update Routes
 
@@ -29,12 +38,28 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const VariationVariationIdSellerNumberSellerNumberConditionsRoute =
-  VariationVariationIdSellerNumberSellerNumberConditionsImport.update({
-    id: '/variation/$variationId/sellerNumber/$sellerNumber/conditions',
-    path: '/variation/$variationId/sellerNumber/$sellerNumber/conditions',
+const VariationVariationIdSellerNumberSellerNumberRoute =
+  VariationVariationIdSellerNumberSellerNumberImport.update({
+    id: '/variation/$variationId/sellerNumber/$sellerNumber',
+    path: '/variation/$variationId/sellerNumber/$sellerNumber',
     getParentRoute: () => rootRoute,
   } as any)
+
+const VariationVariationIdSellerNumberSellerNumberWithSessionCounterRoute =
+  VariationVariationIdSellerNumberSellerNumberWithSessionCounterImport.update({
+    id: '/_withSessionCounter',
+    getParentRoute: () => VariationVariationIdSellerNumberSellerNumberRoute,
+  } as any)
+
+const VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute =
+  VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsImport.update(
+    {
+      id: '/conditions',
+      path: '/conditions',
+      getParentRoute: () =>
+        VariationVariationIdSellerNumberSellerNumberWithSessionCounterRoute,
+    } as any,
+  )
 
 // Populate the FileRoutesByPath interface
 
@@ -54,35 +79,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NoReservationImport
       parentRoute: typeof rootRoute
     }
-    '/variation/$variationId/sellerNumber/$sellerNumber/conditions': {
-      id: '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
-      path: '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
-      fullPath: '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
-      preLoaderRoute: typeof VariationVariationIdSellerNumberSellerNumberConditionsImport
+    '/variation/$variationId/sellerNumber/$sellerNumber': {
+      id: '/variation/$variationId/sellerNumber/$sellerNumber'
+      path: '/variation/$variationId/sellerNumber/$sellerNumber'
+      fullPath: '/variation/$variationId/sellerNumber/$sellerNumber'
+      preLoaderRoute: typeof VariationVariationIdSellerNumberSellerNumberImport
       parentRoute: typeof rootRoute
+    }
+    '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter': {
+      id: '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter'
+      path: '/variation/$variationId/sellerNumber/$sellerNumber'
+      fullPath: '/variation/$variationId/sellerNumber/$sellerNumber'
+      preLoaderRoute: typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterImport
+      parentRoute: typeof VariationVariationIdSellerNumberSellerNumberRoute
+    }
+    '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions': {
+      id: '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions'
+      path: '/conditions'
+      fullPath: '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
+      preLoaderRoute: typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsImport
+      parentRoute: typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterImport
     }
   }
 }
 
 // Create and export the route tree
 
+interface VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteChildren {
+  VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute: typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
+}
+
+const VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteChildren: VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteChildren =
+  {
+    VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute:
+      VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute,
+  }
+
+const VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren =
+  VariationVariationIdSellerNumberSellerNumberWithSessionCounterRoute._addFileChildren(
+    VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteChildren,
+  )
+
+interface VariationVariationIdSellerNumberSellerNumberRouteChildren {
+  VariationVariationIdSellerNumberSellerNumberWithSessionCounterRoute: typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
+}
+
+const VariationVariationIdSellerNumberSellerNumberRouteChildren: VariationVariationIdSellerNumberSellerNumberRouteChildren =
+  {
+    VariationVariationIdSellerNumberSellerNumberWithSessionCounterRoute:
+      VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren,
+  }
+
+const VariationVariationIdSellerNumberSellerNumberRouteWithChildren =
+  VariationVariationIdSellerNumberSellerNumberRoute._addFileChildren(
+    VariationVariationIdSellerNumberSellerNumberRouteChildren,
+  )
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/no-reservation': typeof NoReservationRoute
-  '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
+  '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
+  '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/no-reservation': typeof NoReservationRoute
-  '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
+  '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
+  '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/no-reservation': typeof NoReservationRoute
-  '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
+  '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
+  '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
+  '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
 }
 
 export interface FileRouteTypes {
@@ -90,31 +163,35 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/no-reservation'
+    | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/no-reservation'
+    | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
   id:
     | '__root__'
     | '/'
     | '/no-reservation'
-    | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
+    | '/variation/$variationId/sellerNumber/$sellerNumber'
+    | '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter'
+    | '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NoReservationRoute: typeof NoReservationRoute
-  VariationVariationIdSellerNumberSellerNumberConditionsRoute: typeof VariationVariationIdSellerNumberSellerNumberConditionsRoute
+  VariationVariationIdSellerNumberSellerNumberRoute: typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NoReservationRoute: NoReservationRoute,
-  VariationVariationIdSellerNumberSellerNumberConditionsRoute:
-    VariationVariationIdSellerNumberSellerNumberConditionsRoute,
+  VariationVariationIdSellerNumberSellerNumberRoute:
+    VariationVariationIdSellerNumberSellerNumberRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -129,7 +206,7 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/no-reservation",
-        "/variation/$variationId/sellerNumber/$sellerNumber/conditions"
+        "/variation/$variationId/sellerNumber/$sellerNumber"
       ]
     },
     "/": {
@@ -138,8 +215,22 @@ export const routeTree = rootRoute
     "/no-reservation": {
       "filePath": "no-reservation.tsx"
     },
-    "/variation/$variationId/sellerNumber/$sellerNumber/conditions": {
-      "filePath": "variation.$variationId.sellerNumber.$sellerNumber/conditions.tsx"
+    "/variation/$variationId/sellerNumber/$sellerNumber": {
+      "filePath": "variation.$variationId.sellerNumber.$sellerNumber",
+      "children": [
+        "/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter"
+      ]
+    },
+    "/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter": {
+      "filePath": "variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter.tsx",
+      "parent": "/variation/$variationId/sellerNumber/$sellerNumber",
+      "children": [
+        "/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions"
+      ]
+    },
+    "/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions": {
+      "filePath": "variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter/conditions.tsx",
+      "parent": "/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter"
     }
   }
 }
