@@ -55,7 +55,6 @@ function Index() {
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
-        {/*<pre>{JSON.stringify(sellerNumberPoolsData, null, 2)}</pre>*/}
         <ProseText text={introText} />
 
         <div className="flex flex-wrap gap-4 pt-2">
@@ -74,7 +73,7 @@ function Index() {
                     void (async () => {
                       const { sellerNumberId } =
                         await reserveMutation.mutateAsync({
-                          sellerNumberVariationId: 'id',
+                          sellerNumberVariationId: id,
                         })
                       await navigate({
                         to: '/variation/$variationId/sellerNumber/$sellerNumber/conditions',
