@@ -1,12 +1,12 @@
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
-import { useSellerNumberPoolsQuery } from '@/clients/useSellerNumberPoolsQuery'
 import { useSellerNumberReservationMutation } from '@/clients/useSellerNumberReservationMutation'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
-import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
 import { IsLoadingProvider } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
 import { ProseText } from '@/components/ProseText'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useObtainableNumbers } from '@/hooks/useObtainableNumbers'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
@@ -15,32 +15,25 @@ export const Route = createFileRoute('/')({
 
 function Index() {
   const { data: eventCategoryData, isLoading } = useEventCategoryQuery()
-  const { data: sellerNumberVariationsData } = useSellerNumberVariationsQuery()
-  const { data: sellerNumberPoolsData } = useSellerNumberPoolsQuery()
-  const { dataWithComputedFields: sellerNumbers } = useSellerNumbersQuery()
+  const introText = eventCategoryData?.introText
 
-  const introText = isLoading
-    ? '<pre> </pre><pre> </pre><pre> </pre>'
-    : (eventCategoryData?.introText ?? '')
+  const {
+    data: sellerNumberVariationsData,
+    isLoading: isSellerNumberVariationsLoading,
+  } = useSellerNumberVariationsQuery()
+  const {
+    obtainableNumbers: allObtainableNumbers,
+    isLoading: isObtainableNumbersLoading,
+  } = useObtainableNumbers()
+
+  const isVariationButtonsLoading =
+    isSellerNumberVariationsLoading || isObtainableNumbersLoading
 
   const variationsButtonData = sellerNumberVariationsData?.map(
     (variationData) => {
-      const obtainableNumbers = sellerNumberPoolsData
-        ?.filter((pool) => pool.sellerNumberVariation === variationData.id)
-        .reduce(
-          (numbers, pool) => [
-            ...numbers,
-            ...pool.resolvedNumbers.filter((resolvedNumber) => {
-              const sellerNumber = sellerNumbers?.find(
-                ({ sellerNumberNumber, sellerNumberPool }) =>
-                  sellerNumberNumber === resolvedNumber &&
-                  sellerNumberPool === pool.id
-              )
-              return !sellerNumber || sellerNumber.isObtainable
-            }),
-          ],
-          [] as number[]
-        )
+      const obtainableNumbers = allObtainableNumbers?.filter(
+        (n) => n.sellerNumberVariation === variationData.id
+      )
       return {
         ...variationData,
         obtainableNumbers,
@@ -58,6 +51,7 @@ function Index() {
         <ProseText text={introText} />
 
         <div className="flex flex-wrap gap-4 pt-2">
+          {isVariationButtonsLoading && <Skeleton className="h-20 w-full" />}
           {!!variationsButtonData &&
             variationsButtonData.map(
               ({ id, obtainableCount, sellerNumberVariationName }) => (
