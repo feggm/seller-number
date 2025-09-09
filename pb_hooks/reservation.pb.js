@@ -84,7 +84,7 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
 
       // Handle null, undefined, or non-array values
       if (!numberDatas || !Array.isArray(numberDatas)) {
-        console.log('Invalid numberDatas:', numberDatas)
+        $app.logger().log('Invalid numberDatas:', numberDatas)
         return []
       }
 
@@ -129,7 +129,11 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
     const obtainableNumbers = []
 
     for (const pool of sellerNumberPools) {
-      const resolvedNumbers = resolveNumbers(pool.get('numbers'))
+      const resolvedNumbers = resolveNumbers(
+        JSON.parse(pool.get('numbersAsJsonArray'))
+      )
+
+      console.log(resolvedNumbers)
 
       for (const resolvedNumber of resolvedNumbers) {
         const existingSellerNumber = existingSellerNumbers.find(
@@ -197,6 +201,7 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
 
     return e.json(200, { sellerNumberId: sellerNumberRecord.get('id') })
   } catch (error) {
+    console.error(error)
     $app.logger().error('Error in reservation endpoint', 'error', error)
     return e.json(500, {
       error: 'Internal server error',

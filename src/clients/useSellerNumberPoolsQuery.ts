@@ -23,7 +23,10 @@ const SellerNumberPoolSchema = z.object({
   sellerNumberVariation: z.string(),
   obtainableFrom: z.coerce.date().optional().catch(undefined),
   obtainableTo: z.coerce.date().optional().catch(undefined),
-  numbers: gracefulArray(NumberDataSchema),
+  numbersAsJsonArray: z
+    .string()
+    .transform((v) => JSON.parse(v) as unknown)
+    .pipe(gracefulArray(NumberDataSchema)),
 })
 
 const resolveNumbers = (numberDatas: NumberData[]) => [
@@ -59,7 +62,7 @@ const getSellerNumberPools = async (
     )
     .map((sellerNumberPool) => ({
       ...sellerNumberPool,
-      resolvedNumbers: resolveNumbers(sellerNumberPool.numbers),
+      resolvedNumbers: resolveNumbers(sellerNumberPool.numbersAsJsonArray),
     }))
 }
 
