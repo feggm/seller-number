@@ -1,5 +1,6 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { queryClient } from '@/lib/queryClient'
+import { getSyncedNow } from '@/lib/timeSync'
 import { UseQueryOptions, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
@@ -17,7 +18,7 @@ const getUpcomingEvent = async (eventCategoryId: string) => {
     await pb.collection('events').getFirstListItem(
       pb.filter('eventCategory = {:eventCategoryId} && eventDate > {:now}', {
         eventCategoryId,
-        now: new Date(),
+        now: getSyncedNow(),
       }),
       {
         fields: Object.keys(EventSchema.shape).join(','),

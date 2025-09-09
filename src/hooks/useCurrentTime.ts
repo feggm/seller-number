@@ -1,8 +1,9 @@
+import { getSyncedNow } from '@/lib/timeSync'
 import { useCallback, useSyncExternalStore } from 'react'
 
 const simpleCurrentDateStore = {
   intervalId: null as NodeJS.Timeout | null,
-  currentDate: new Date(),
+  currentDate: getSyncedNow(),
   subscribers: new Set<() => void>(),
   addSubscriber(callback: () => void) {
     this.subscribers.add(callback)
@@ -22,7 +23,7 @@ const simpleCurrentDateStore = {
   start() {
     if (this.intervalId) return
     this.intervalId = setInterval(() => {
-      this.currentDate = new Date()
+      this.currentDate = getSyncedNow()
       this.notifySubscribers()
     }, 1000)
   },

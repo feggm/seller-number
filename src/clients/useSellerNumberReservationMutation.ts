@@ -1,3 +1,4 @@
+import { getSyncedNow } from '@/lib/timeSync'
 import { useMutation } from '@tanstack/react-query'
 import mitt from 'mitt'
 import { useCallback, useEffect, useRef } from 'react'
@@ -56,7 +57,7 @@ export const useSellerNumberReservationMutation = () => {
           ) => {
             const reservedAt = sellerNumber?.reservedAt
             if (!reservedAt) return false
-            const now = new Date()
+            const now = getSyncedNow()
             const diffInMs = now.getTime() - reservedAt.getTime()
             return diffInMs < 30 * 1000 // 30 seconds
           }
