@@ -100,6 +100,14 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
           for (let i = numberData.from; i <= numberData.to; i++) {
             resolved.push(i)
           }
+        } else if (Array.isArray(numberData) && numberData.length === 2) {
+          // Handle tuple format [from, to]
+          const [from, to] = numberData
+          if (typeof from === 'number' && typeof to === 'number') {
+            for (let i = from; i <= to; i++) {
+              resolved.push(i)
+            }
+          }
         }
       }
       return [...new Set(resolved)]

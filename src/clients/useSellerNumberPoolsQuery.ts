@@ -14,6 +14,9 @@ const NumberDataSchema = z.union([
     from: z.number().min(0),
     to: z.number().min(0),
   }),
+  z
+    .tuple([z.number().min(0), z.number().min(0)])
+    .transform(([from, to]) => ({ from, to })),
 ])
 
 type NumberData = z.infer<typeof NumberDataSchema>
