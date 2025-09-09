@@ -18,7 +18,7 @@ import { PageTitleProvider } from '@/context/PageTitleContext'
 import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { Outlet, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { add } from 'date-fns'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 export const Route = createFileRoute(
   '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter'
@@ -30,10 +30,12 @@ function RouteComponent() {
   const { sellerNumber: sellerNumberId } = Route.useParams()
 
   const { data: eventCategory } = useEventCategoryQuery()
-  const { data: sellerNumbers } = useSellerNumbersQuery()
+  const { data: sellerNumbers, isLoading: isSellerNumbersLoading } =
+    useSellerNumbersQuery()
   const sellerNumber = sellerNumbers?.find(
     (number) => number.id === sellerNumberId
   )
+  const sellerNumberNotFound = !isSellerNumbersLoading && !sellerNumber
 
   const { getTimeDiff } = useCurrentTime()
   const timeLeft = useMemo(() => {
@@ -46,9 +48,17 @@ function RouteComponent() {
   }, [sellerNumber, eventCategory, getTimeDiff])
 
   const isSessionExpired = useMemo(() => {
+    if (sellerNumberNotFound) return true
+
     if (!timeLeft) return false
     return timeLeft.seconds <= 0
-  }, [timeLeft])
+  }, [sellerNumberNotFound, timeLeft])
+  const [isDialogActive, setIsDialogActive] = useState(false)
+  useEffect(() => {
+    if (isSessionExpired) {
+      setIsDialogActive(true)
+    }
+  }, [isSessionExpired])
 
   const [title, setTitle] = useState('')
 
@@ -82,7 +92,7 @@ function RouteComponent() {
         <Outlet />
       </PageCard>
 
-      <AlertDialog open={isSessionExpired}>
+      <AlertDialog open={isDialogActive}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deine Sitzung ist abgelaufen</AlertDialogTitle>

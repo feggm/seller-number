@@ -192,20 +192,18 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
     let sellerNumberRecord
 
     if (selectedNumber.sellerNumber) {
-      // Update existing record
-      sellerNumberRecord = selectedNumber.sellerNumber
-      sellerNumberRecord.set('reservedAt', new Date().toISOString())
-      $app.save(sellerNumberRecord)
-    } else {
-      // Create new record
-      const collection = $app.findCollectionByNameOrId('sellerNumbers')
-      sellerNumberRecord = new Record(collection)
-      sellerNumberRecord.set('sellerNumberNumber', selectedNumber.number)
-      sellerNumberRecord.set('sellerNumberPool', selectedNumber.poolId)
-      sellerNumberRecord.set('reservedAt', new Date().toISOString())
-      sellerNumberRecord.set('sellerDetails', '')
-      $app.save(sellerNumberRecord)
+      // Delete existing record and create new one
+      $app.delete(selectedNumber.sellerNumber)
     }
+
+    // Create new record
+    const collection = $app.findCollectionByNameOrId('sellerNumbers')
+    sellerNumberRecord = new Record(collection)
+    sellerNumberRecord.set('sellerNumberNumber', selectedNumber.number)
+    sellerNumberRecord.set('sellerNumberPool', selectedNumber.poolId)
+    sellerNumberRecord.set('reservedAt', new Date().toISOString())
+    sellerNumberRecord.set('sellerDetails', '')
+    $app.save(sellerNumberRecord)
 
     return e.json(200, { sellerNumberId: sellerNumberRecord.get('id') })
   } catch (error) {
