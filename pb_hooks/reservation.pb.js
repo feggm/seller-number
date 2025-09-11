@@ -78,6 +78,35 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
       })
     }
 
+    // Filter pools by obtainableFrom/obtainableTo
+    const now = new Date()
+    const availablePools = sellerNumberPools.filter((pool) => {
+      const obtainableFrom = pool.get('obtainableFrom')
+      const obtainableTo = pool.get('obtainableTo')
+
+      // Check obtainableFrom - if set, current time must be >= obtainableFrom
+      if (obtainableFrom && obtainableFrom !== '') {
+        const fromDate = new Date(obtainableFrom)
+        if (now < fromDate) return false
+      }
+
+      // Check obtainableTo - if set, current time must be <= obtainableTo
+      if (obtainableTo && obtainableTo !== '') {
+        const toDate = new Date(obtainableTo)
+        if (now > toDate) return false
+      }
+
+      return true
+    })
+
+    if (availablePools.length === 0) {
+      return e.json(404, {
+        error: 'No obtainable seller number pools found at this time',
+      })
+    }
+
+    sellerNumberPools = availablePools
+
     // Function to resolve numbers from pool data
     const resolveNumbers = (numberDatas) => {
       const resolved = []
