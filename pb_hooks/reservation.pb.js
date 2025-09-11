@@ -170,8 +170,6 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
         JSON.parse(pool.get('numbersAsJsonArray'))
       )
 
-      console.log(resolvedNumbers)
-
       for (const resolvedNumber of resolvedNumbers) {
         const existingSellerNumber = existingSellerNumbers.find(
           (sn) =>
