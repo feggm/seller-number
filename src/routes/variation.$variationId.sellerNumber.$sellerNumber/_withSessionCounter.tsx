@@ -36,6 +36,7 @@ function RouteComponent() {
     (number) => number.id === sellerNumberId
   )
   const sellerNumberNotFound = !isSellerNumbersLoading && !sellerNumber
+  const hasSellerNumberDetails = !!sellerNumber?.sellerDetails
 
   const { getTimeDiff } = useCurrentTime()
   const timeLeft = useMemo(() => {
@@ -49,10 +50,11 @@ function RouteComponent() {
 
   const isSessionExpired = useMemo(() => {
     if (sellerNumberNotFound) return true
+    if (hasSellerNumberDetails) return true
 
     if (!timeLeft) return false
     return timeLeft.seconds <= 0
-  }, [sellerNumberNotFound, timeLeft])
+  }, [sellerNumberNotFound, timeLeft, hasSellerNumberDetails])
   const [isDialogActive, setIsDialogActive] = useState(false)
   useEffect(() => {
     if (isSessionExpired) {
