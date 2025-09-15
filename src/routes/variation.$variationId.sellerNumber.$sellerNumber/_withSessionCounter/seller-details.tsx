@@ -3,6 +3,7 @@ import { PageButton } from '@/components/PageButton'
 import { CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { usePageTitle } from '@/context/PageTitleContext'
+import { useDeviceUuid } from '@/hooks/useDeviceUuid'
 import { useForm } from '@tanstack/react-form'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
@@ -36,6 +37,7 @@ function RouteComponent() {
   const { variationId, sellerNumber } = Route.useParams()
   const router = useRouter()
   const registrationMutation = useSellerNumberRegistrationMutation()
+  const deviceUuid = useDeviceUuid()
 
   const form = useForm({
     defaultValues: {
@@ -52,6 +54,7 @@ function RouteComponent() {
           sellerLastName: value.sellerLastName,
           sellerEmail: value.sellerEmail,
           sellerPhone: value.sellerPhone,
+          deviceUuid,
         })
 
         // Navigate to success page

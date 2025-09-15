@@ -11,6 +11,7 @@ const RegistrationRequestSchema = z.object({
   sellerFirstName: z.string(),
   sellerLastName: z.string(),
   sellerEmail: z.string().email(),
+  deviceUuid: z.string().uuid(),
   sellerPhone: z.string().optional(),
 })
 
