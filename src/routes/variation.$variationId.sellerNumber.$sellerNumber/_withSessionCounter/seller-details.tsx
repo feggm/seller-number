@@ -33,7 +33,7 @@ const SellerPhoneSchema = z.string().refine((value) => {
 
 function RouteComponent() {
   usePageTitle('Verkäuferdaten')
-  const { sellerNumber } = Route.useParams()
+  const { variationId, sellerNumber } = Route.useParams()
   const router = useRouter()
   const registrationMutation = useSellerNumberRegistrationMutation()
 
@@ -45,16 +45,24 @@ function RouteComponent() {
       sellerPhone: '',
     },
     onSubmit: async ({ value }) => {
-      await registrationMutation.mutateAsync({
-        sellerNumberId: sellerNumber,
-        sellerFirstName: value.sellerFirstName,
-        sellerLastName: value.sellerLastName,
-        sellerEmail: value.sellerEmail,
-        sellerPhone: value.sellerPhone,
-      })
+      try {
+        await registrationMutation.mutateAsync({
+          sellerNumberId: sellerNumber,
+          sellerFirstName: value.sellerFirstName,
+          sellerLastName: value.sellerLastName,
+          sellerEmail: value.sellerEmail,
+          sellerPhone: value.sellerPhone,
+        })
 
-      // Navigate to success page or back to main page
-      void router.navigate({ to: '/' })
+        // Navigate to success page
+        void router.navigate({
+          to: '/variation/$variationId/sellerNumber/$sellerNumber/success',
+          params: { variationId, sellerNumber },
+        })
+      } catch (error) {
+        // Error handling is done by the mutation
+        console.error('Registration failed:', error)
+      }
     },
   })
 
