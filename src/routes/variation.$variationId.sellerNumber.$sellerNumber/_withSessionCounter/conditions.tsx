@@ -2,8 +2,9 @@ import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariati
 import { IsLoadingProvider } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { ProseText } from '@/components/ProseText'
+import { CardContent, CardFooter } from '@/components/ui/card'
 import { usePageTitle } from '@/context/PageTitleContext'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 
 export const Route = createFileRoute(
   '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter/conditions'
@@ -13,7 +14,9 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
   usePageTitle('Verkäuferinformationen')
-  const { variationId: sellerNumberVariationId } = Route.useParams()
+  const { variationId: sellerNumberVariationId, sellerNumber } =
+    Route.useParams()
+  const router = useRouter()
 
   const { data: sellerNumberVariations } = useSellerNumberVariationsQuery()
   const sellerNumberVariation = sellerNumberVariations?.find(
@@ -21,15 +24,21 @@ function RouteComponent() {
   )
 
   const handleAccept = () => {
-    // Handle accept logic here
+    void router.navigate({
+      to: '/variation/$variationId/sellerNumber/$sellerNumber/seller-details',
+      params: { variationId: sellerNumberVariationId, sellerNumber },
+    })
   }
   return (
-    <IsLoadingProvider isLoading={!sellerNumberVariation}>
-      <ProseText text={sellerNumberVariation?.conditionsText} />
-
-      <div className="flex justify-center pt-4">
+    <>
+      <CardContent className="p-6 space-y-6 overflow-y-auto">
+        <IsLoadingProvider isLoading={!sellerNumberVariation}>
+          <ProseText text={sellerNumberVariation?.conditionsText} />
+        </IsLoadingProvider>
+      </CardContent>
+      <CardFooter className="flex justify-center">
         <PageButton onClick={handleAccept}>AKZEPTIEREN UND WEITER</PageButton>
-      </div>
-    </IsLoadingProvider>
+      </CardFooter>
+    </>
   )
 }

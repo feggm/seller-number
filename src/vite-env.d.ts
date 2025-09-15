@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/* eslint-disable @typescript-eslint/consistent-type-definitions */
 
 interface ViteTypeOptions {
   // By adding this line, you can make the type of ImportMetaEnv strict

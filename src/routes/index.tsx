@@ -5,6 +5,7 @@ import { IsLoadingProvider } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
 import { ProseText } from '@/components/ProseText'
+import { CardContent, CardFooter } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useObtainableNumbers } from '@/hooks/useObtainableNumbers'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
@@ -48,9 +49,11 @@ function Index() {
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
-        <ProseText text={introText} />
+        <CardContent className="p-6 space-y-6 overflow-y-auto">
+          <ProseText text={introText} />
+        </CardContent>
 
-        <div className="flex flex-wrap gap-4 pt-2">
+        <CardFooter className="flex flex-wrap gap-4 pt-2">
           {isVariationButtonsLoading && <Skeleton className="h-20 w-full" />}
           {!!variationsButtonData &&
             variationsButtonData.map(
@@ -83,7 +86,7 @@ function Index() {
                 </PageButton>
               )
             )}
-        </div>
+        </CardFooter>
       </PageCard>
     </IsLoadingProvider>
   )
