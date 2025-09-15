@@ -1,9 +1,10 @@
+import { useSellerNumberRegistrationMutation } from '@/clients/useSellerNumberRegistrationMutation'
 import { PageButton } from '@/components/PageButton'
 import { CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { usePageTitle } from '@/context/PageTitleContext'
 import { useForm } from '@tanstack/react-form'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
 export const Route = createFileRoute(
@@ -32,6 +33,9 @@ const SellerPhoneSchema = z.string().refine((value) => {
 
 function RouteComponent() {
   usePageTitle('Verkäuferdaten')
+  const { sellerNumber } = Route.useParams()
+  const router = useRouter()
+  const registrationMutation = useSellerNumberRegistrationMutation()
 
   const form = useForm({
     defaultValues: {
@@ -41,9 +45,16 @@ function RouteComponent() {
       sellerPhone: '',
     },
     onSubmit: async ({ value }) => {
-      // TODO: Handle form submission
-      await new Promise((resolve) => setTimeout(resolve, 5000))
-      console.log('Form data:', value)
+      await registrationMutation.mutateAsync({
+        sellerNumberId: sellerNumber,
+        sellerFirstName: value.sellerFirstName,
+        sellerLastName: value.sellerLastName,
+        sellerEmail: value.sellerEmail,
+        sellerPhone: value.sellerPhone,
+      })
+
+      // Navigate to success page or back to main page
+      void router.navigate({ to: '/' })
     },
   })
 
@@ -56,6 +67,7 @@ function RouteComponent() {
             e.stopPropagation()
             void form.handleSubmit()
           }}
+          id="seller-details-form"
           className="space-y-6"
         >
           <form.Field
@@ -215,6 +227,7 @@ function RouteComponent() {
               type="submit"
               disabled={!canSubmit}
               isLoading={isSubmitting}
+              form="seller-details-form"
             >
               REGISTRIEREN
             </PageButton>
