@@ -109,6 +109,16 @@ routerAdd('POST', '/api/seller-number/registration', (e) => {
     sellerDetailsRecord.set('ipAddress', ipAddress)
     $app.save(sellerDetailsRecord)
 
+    const { sendRegistrationEmails } = require(`${__hooks}/email.js`)
+    // Send registration emails
+    sendRegistrationEmails({
+      sellerNumberId: sellerNumber.get('id'),
+      sellerFirstName,
+      sellerLastName,
+      sellerEmail,
+      sellerPhone,
+    })
+
     // Associate seller details with seller number
     sellerNumber.set('sellerDetails', sellerDetailsRecord.get('id'))
     $app.save(sellerNumber)
