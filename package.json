@@ -6,15 +6,15 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b && vite build",
-    "deploy:ssh": "npx tsx scripts/deploy-ssh/index.ts",
+    "deploy:ssh": "tsx scripts/deploy-ssh/index.ts",
     "dev": "concurrently \"npm:dev:*\"",
     "dev:pocketbase": "./pocketbase.bin serve",
     "dev:vite": "vite",
-    "postinstall": "npm install:pocketbase",
+    "postinstall": "npm run install:pocketbase",
     "install:pocketbase": "node --experimental-strip-types scripts/install-pocketbase/index.ts",
     "lint": "eslint .",
     "start": "./pocketbase.bin serve",
-    "typecheck": "npm tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
