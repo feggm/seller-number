@@ -2,17 +2,19 @@
   "name": "seller-number",
   "version": "0.1.0",
   "private": true,
+  "repository": "https://github.com/feggm/seller-number.git",
   "type": "module",
   "scripts": {
     "build": "tsc -b && vite build",
-    "dev": "concurrently \"pnpm:dev:*\"",
+    "deploy:ssh": "npx tsx scripts/deploy-ssh/index.ts",
+    "dev": "concurrently \"npm:dev:*\"",
     "dev:pocketbase": "./pocketbase.bin serve",
     "dev:vite": "vite",
-    "postinstall": "pnpm install:pocketbase",
+    "postinstall": "npm install:pocketbase",
     "install:pocketbase": "node --experimental-strip-types scripts/install-pocketbase/index.ts",
     "lint": "eslint .",
     "start": "./pocketbase.bin serve",
-    "typecheck": "pnpm tsc -b --noEmit"
+    "typecheck": "npm tsc -b --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -63,10 +65,12 @@
     "prettier": "3.5.3",
     "prettier-plugin-packagejson": "^2.5.10",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "tsx": "^4.20.5",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.6",
-    "zod-opts": "^0.1.8"
+    "zod-opts": "^0.1.8",
+    "zx": "^8.8.2"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
+  "packageManager": "npm@11.6.0+sha512.77f3fb0dbbd881835d7bd1217deabdf7ed77fc4ec4f363df64fc3cb986404abf6c437661041080f5c5d225103508e7c9ea30cb2742b7e942675d05a10af2d7b9"
 }
