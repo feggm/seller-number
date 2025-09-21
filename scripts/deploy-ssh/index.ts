@@ -34,7 +34,7 @@ const run = async () => {
   await ssh.setup({ user: sshUser, host: sshHost, path: remotePath })
 
   // fetch the latest changes (via git)
-  await ssh.run('git pull')
+  await ssh.run('git stash && git pull')
 
   // stop the app
   await ssh.run('supervisorctl stop seller-number')
