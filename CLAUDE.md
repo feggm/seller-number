@@ -8,24 +8,24 @@ This is a seller number reservation system built with PocketBase (backend) and R
 - **Frontend**: React 19, Vite, TanStack Router, TanStack Query
 - **Styling**: TailwindCSS 4.x
 - **Database**: PocketBase (SQLite)
-- **Package Manager**: pnpm
+- **Package Manager**: npm
 
 ## Development Commands
 ```bash
 # Install dependencies and PocketBase binary
-pnpm install
+npm install
 
 # Start development (runs both PocketBase and Vite)
-pnpm dev
+npm run dev
 
 # Build production
-pnpm build
+npm run build
 
 # Start production server
-pnpm start
+npm start
 
 # Lint code
-pnpm lint
+npm run lint
 ```
 
 ## Database Collections
@@ -35,7 +35,7 @@ pnpm lint
    - Fields: `categoryName`, `sessionTimeInSec`
    - Purpose: Event categories with session timeout settings
 
-2. **events** 
+2. **events**
    - Fields: `eventName`, `eventDate`, `eventCategory` (relation)
    - Purpose: Individual events linked to categories
 
@@ -133,7 +133,7 @@ const field = data.field
 ### Development:
 - PocketBase serves on port 8090 by default
 - Frontend development server on different port (Vite default)
-- Use `pnpm dev` to run both concurrently
+- Use `npm run dev` to run both concurrently
 
 ### Testing:
 ```bash
@@ -189,7 +189,7 @@ const ResponseSchema = z.object({
 // 2. API function using pb.send
 const apiCall = async (request: z.infer<typeof RequestSchema>) => {
   const validatedRequest = RequestSchema.parse(request)
-  
+
   const response = await pb.send<unknown>('/api/custom/endpoint', {
     method: 'POST',
     body: validatedRequest,
@@ -210,7 +210,7 @@ export const useApiMutation = () => {
 - **Use `pb.send<unknown>`** for custom endpoints (not typed generics)
 - **Always validate** with Zod schemas on both request and response
 - **Use `withErrorLogging`** wrapper for consistent error handling
-- **Use `pb.collection()`** for standard CRUD operations  
+- **Use `pb.collection()`** for standard CRUD operations
 - **Use `pb.send()`** for custom hook endpoints
 
 ## Common Issues & Solutions

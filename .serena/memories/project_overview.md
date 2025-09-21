@@ -8,7 +8,7 @@ A seller number reservation system built with PocketBase (backend) and React/Vit
 - **Frontend**: React 19, Vite, TanStack Router, TanStack Query
 - **Styling**: TailwindCSS 4.x
 - **Database**: PocketBase (SQLite)
-- **Package Manager**: pnpm
+- **Package Manager**: npm
 
 ## Key Business Logic
 - Number reservation with time-based sessions

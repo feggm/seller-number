@@ -6,7 +6,7 @@ import { OSSchema, getOS } from './getOS.ts'
 import { getVersion } from './getVersion.ts'
 
 const cliParser = parser()
-  .name('pnpm install:pocketbase')
+  .name('npm run install:pocketbase')
   .options({
     filename: {
       type: z.string().default('pocketbase.bin'),

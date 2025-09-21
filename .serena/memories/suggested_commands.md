@@ -3,30 +3,30 @@
 ## Development Commands
 ```bash
 # Install dependencies and PocketBase binary
-pnpm install
+npm install
 
 # Start development (runs both PocketBase and Vite concurrently)
-pnpm dev
+npm run dev
 
 # Build production
-pnpm build
+npm run build
 
 # Start production server
-pnpm start
+npm start
 
 # Lint code
-pnpm lint
+npm run lint
 
 # Type checking
-pnpm typecheck
+npm run typecheck
 ```
 
 ## Task Completion Commands
 After making code changes, run:
-1. `pnpm lint` - Check code style and catch errors
-2. `pnpm typecheck` - Validate TypeScript types
+1. `npm run lint` - Check code style and catch errors
+2. `npm run typecheck` - Validate TypeScript types
 
 ## Development Notes
 - PocketBase serves on port 8090 by default
 - Frontend development server runs on Vite's default port
-- Use `pnpm dev` to run both servers concurrently
+- Use `npm run dev` to run both servers concurrently
