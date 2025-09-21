@@ -29,21 +29,29 @@ const cliParser = parser()
 
 const run = async () => {
   const { sshHost, sshUser, remotePath } = cliParser.parse()
+
+  // ssh into the server
   await ssh.setup({ user: sshUser, host: sshHost, path: remotePath })
 
-  // ssh into the server, fetch the latest changes (via git)
+  // fetch the latest changes (via git)
   await ssh.run('git pull')
+
+  // stop the app
+  await ssh.run('supervisorctl stop seller-number')
 
   // install dependencies
   await ssh.run('npm install')
 
+  // build the project
+  await ssh.run('npm run build')
+
   // create/update the ini file
   await ssh.run(
-    `mkdir -p ~/etc/services.d && echo ${sellerNumberConfig()} > ~/etc/services.d/seller-number.ini && supervisorctl reread && supervisorctl update`
+    `mkdir -p ~/etc/services.d && echo "${sellerNumberConfig()}" > ~/etc/services.d/seller-number.ini && supervisorctl reread && supervisorctl update`
   )
 
-  // (re)start the app
-  await ssh.run('supervisorctl restart seller-number')
+  // start the app
+  await ssh.run('supervisorctl start seller-number')
 }
 
 void run()
