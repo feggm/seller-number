@@ -13,6 +13,7 @@ const EventCategorySchema = z.object({
   introTextUrl: z.string(),
   eventCategoryName: z.string(),
   sessionTimeInSec: z.number().int().positive(),
+  domain: z.string(),
 })
 
 const getEventCategory = async (eventCategoryId: string) => {
@@ -41,4 +42,38 @@ export const useEventCategoryQuery = () => {
 
 void pb.collection('eventCategories').subscribe('*', ({ record }) => {
   void queryClient.invalidateQueries({ queryKey: ['eventCategory', record.id] })
+})
+
+//////////////////////////////////////////////////////////////////
+// Query by domain
+//////////////////////////////////////////////////////////////////
+
+const EventCategoryByDomainSchema = EventCategorySchema.pick({
+  id: true,
+})
+
+const getEventCategoryByDomain = async (domain: string) => {
+  const eventCategory = EventCategoryByDomainSchema.parse(
+    await pb
+      .collection('eventCategories')
+      .getFirstListItem(`domain="${domain}"`, {
+        fields: Object.keys(EventCategoryByDomainSchema.shape).join(','),
+      })
+  )
+  return eventCategory
+}
+export const useEventCategoryByDomainQuery = (domain: string | undefined) => {
+  return useQuery({
+    queryKey: ['eventCategoryByDomain', domain],
+    queryFn: withErrorLogging(() => getEventCategoryByDomain(domain ?? '')),
+    enabled: !!domain,
+    staleTime: Infinity,
+  })
+}
+void pb.collection('eventCategories').subscribe('*', ({ record }) => {
+  const { data, success } = EventCategorySchema.safeParse(record)
+  const queryKey = success
+    ? ['eventCategoryByDomain', data.domain]
+    : ['eventCategoryByDomain']
+  void queryClient.invalidateQueries({ queryKey })
 })

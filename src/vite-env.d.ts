@@ -9,7 +9,6 @@ interface ViteTypeOptions {
 
 interface ImportMetaEnv {
   readonly VITE_POCKETBASE_URL: string
-  readonly VITE_EVENT_CATEGORY_ID: string
   // more env variables...
 }
 

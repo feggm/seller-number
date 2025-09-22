@@ -1,25 +1,35 @@
-import { createContext, use } from 'react'
+import { useEventCategoryByDomainQuery } from '@/clients/useEventCategoryQuery'
+import { createContext, use, useMemo } from 'react'
 
-const getDefaultEventCategoryId = () => {
+const currentDomain = window.location.host
+
+const getDefaultEventCategoryIdFromSearchParam = () => {
   const urlParams = new URLSearchParams(window.location.search)
-  const eventCategoryIdFromUrl = urlParams.get('eventCategoryId')
-  return eventCategoryIdFromUrl ?? import.meta.env.VITE_EVENT_CATEGORY_ID
+  return urlParams.get('eventCategoryId')
 }
 
-const EventCategoryIdContext = createContext<string>(
-  getDefaultEventCategoryId()
-)
+const EventCategoryIdContext = createContext<string>('')
 
 export const EventCategoryIdProvider = ({
   children,
-  // eslint-disable-next-line react-x/no-unstable-default-props
-  value = getDefaultEventCategoryId(),
+  value,
 }: {
   children: React.ReactNode
   value?: string
 }) => {
+  const syncCategoryId = useMemo(
+    () => value ?? getDefaultEventCategoryIdFromSearchParam(),
+    [value]
+  )
+  const { data } = useEventCategoryByDomainQuery(
+    syncCategoryId ? undefined : currentDomain
+  )
+  const eventCategoryId = syncCategoryId ?? data?.id
+  if (!eventCategoryId) return null
   return (
-    <EventCategoryIdContext value={value}>{children}</EventCategoryIdContext>
+    <EventCategoryIdContext value={eventCategoryId}>
+      {children}
+    </EventCategoryIdContext>
   )
 }
 
