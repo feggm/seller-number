@@ -1,3 +1,4 @@
+import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberRegistrationData } from '@/clients/useSellerNumberRegistrationMutation'
 import { useSellerNumbersQuery } from '@/clients/useSellerNumbersQuery'
 import { IsLoadingProvider } from '@/components/LoadingSkeleton'
@@ -32,8 +33,12 @@ function RouteComponent() {
     (number) => number.id === sellerNumber
   )
 
+  const { data: eventCategoryData } = useEventCategoryQuery()
+
   return (
-    <IsLoadingProvider isLoading={!sellerNumbers || !sellerDetails}>
+    <IsLoadingProvider
+      isLoading={!sellerNumbers || !sellerDetails || !eventCategoryData}
+    >
       <PageCard title="Das hat geklappt">
         <CardContent className="p-6 space-y-6 overflow-y-auto">
           {/* Big first line with the seller number */}
@@ -94,10 +99,10 @@ function RouteComponent() {
               bekommst, überprüfe dein Spam Filter. Wenn alles nicht hilft,
               wende dich an{' '}
               <a
-                href="mailto:verkaufsnummer@kleidermarkt-gummersbach.de"
+                href={`mailto:${eventCategoryData?.supportEmail ?? ''}`}
                 className="text-blue-600 underline"
               >
-                verkaufsnummer@kleidermarkt-gummersbach.de
+                {eventCategoryData?.supportEmail ?? ''}
               </a>
               .
             </ProseText>

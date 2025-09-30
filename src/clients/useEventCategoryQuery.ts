@@ -14,6 +14,7 @@ const EventCategorySchema = z.object({
   eventCategoryName: z.string(),
   sessionTimeInSec: z.number().int().positive(),
   domain: z.string(),
+  supportEmail: z.string(),
 })
 
 const getEventCategory = async (eventCategoryId: string) => {
