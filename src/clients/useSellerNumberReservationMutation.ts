@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { pb } from './pocketbase'
 import { useSellerNumbersQuery } from './useSellerNumbersQuery'
+import { triggerPoll } from './utils/polling'
 import { withErrorLogging } from './withErrorLogging'
 
 const ReservationRequestSchema = z.object({
@@ -29,6 +30,7 @@ const reserveSellerNumber =
       method: 'POST',
       body: validatedRequest,
     })
+    triggerPoll()
 
     const validatedResponse = ReservationResponseSchema.parse(response)
     await waitForUpdates?.(validatedResponse)

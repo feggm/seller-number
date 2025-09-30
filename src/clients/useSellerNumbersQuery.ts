@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { pb } from './pocketbase'
 import { useEventCategoryQuery } from './useEventCategoryQuery'
 import { sellerNumberPoolsQueryOptions } from './useSellerNumberPoolsQuery'
+import { onPoll } from './utils/polling'
 import { withErrorLogging } from './withErrorLogging'
 
 const SellerNumberSchema = z.object({
@@ -84,8 +85,10 @@ export const useSellerNumbersQuery = () => {
   })
 }
 
-void pb.collection('sellerNumbers').subscribe('*', () => {
+const invalidateSellerNumbersQuery = () => {
   void queryClient.invalidateQueries({
     queryKey: ['sellerNumbers'],
   })
-})
+}
+void pb.collection('sellerNumbers').subscribe('*', invalidateSellerNumbersQuery)
+onPoll(invalidateSellerNumbersQuery)
