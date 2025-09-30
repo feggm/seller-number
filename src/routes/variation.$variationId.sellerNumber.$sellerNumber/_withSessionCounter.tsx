@@ -77,14 +77,14 @@ function RouteComponent() {
           <IsLoadingProvider isLoading={!timeLeft}>
             <div className="text-xs whitespace-pre text-right">
               <LoadingSkeleton>
-                <span className="inline-block w-3 h-3 bg-white rounded-full animate-pulse"></span>
+                <span className="inline-block w-3 h-3 mr-1 -mb-0.5 bg-white rounded-full animate-pulse"></span>
                 {isSessionExpired ? (
-                  <>Sitzung abgelaufen</>
+                  <>Abgelaufen</>
                 ) : (
-                  <>
-                    Sitzung endet: {(timeLeft?.minutes ?? 0) % 60}m{' '}
+                  <span className="font-mono">
+                    {(timeLeft?.minutes ?? 0) % 60}m{' '}
                     {(timeLeft?.seconds ?? 0) % 60}s{' '}
-                  </>
+                  </span>
                 )}
               </LoadingSkeleton>
             </div>

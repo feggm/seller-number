@@ -11,7 +11,7 @@ export const PageCard = ({
 }) => {
   return (
     <Card className="w-full max-w-md overflow-hidden shadow-md border-0 max-h-[calc(100svh-2rem)] m-4">
-      <div className="bg-gradient-to-r from-sky-500 to-cyan-400 p-6 -mt-6 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-sky-500 to-cyan-400 p-6 -mt-6 flex justify-between items-center flex-wrap">
         <h1 className="text-2xl font-medium text-white">{title}</h1>
 
         {titleBarSuffix && (
