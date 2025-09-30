@@ -17,11 +17,7 @@ routerAdd('POST', '/api/seller-number/registration', (e) => {
   const deviceUuid = data.deviceUuid
 
   // Get IP address from request
-  const ipAddress =
-    e.remoteIP() ||
-    e.request.header.get('X-Forwarded-For') ||
-    e.request.header.get('X-Real-IP') ||
-    ''
+  const ipAddress = e.realIP() || ''
 
   if (!sellerNumberId) {
     return e.json(400, { error: 'sellerNumberId is required' })
