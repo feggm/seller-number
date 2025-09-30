@@ -194,7 +194,9 @@ Verkäufernummer: ${sellerNumberNumber}`
  * @param {string} params.sellerPhone - Seller's phone number
  * @param {string} params.sellerNumberNumber - Seller number
  * @param {string} params.conditionsTextUrl - URL to conditions text (optional)
+ * @param {string} params.conditionsText - conditions text (optional)
  * @param {string} params.additionalEmailTextUrl - URL to additional email text (optional)
+ * @param {string} params.additionalEmailText - Additional email text (optional)
  */
 const sendSellerConfirmation = (params) => {
   const {
@@ -205,7 +207,9 @@ const sendSellerConfirmation = (params) => {
     sellerPhone,
     sellerNumberNumber,
     conditionsTextUrl,
+    conditionsText,
     additionalEmailTextUrl,
+    additionalEmailText,
   } = params
 
   const subject = `Deine Verkaufsnummer für ${eventCategoryName}`
@@ -214,28 +218,25 @@ const sendSellerConfirmation = (params) => {
   let conditionsHtml = ''
   let additionalEmailHtml = ''
 
-  if (conditionsTextUrl) {
-    const conditionsText = resolveUrl(conditionsTextUrl)
-    if (conditionsText) {
-      conditionsHtml = `
-        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #3498db; border-radius: 0 5px 5px 0;">
-          <h3 style="color: #2c3e50; margin-top: 0;">Richtlinien</h3>
-          <div>${conditionsText}</div>
-        </div>
-      `
-    }
+  const finalConditionsText = resolveUrl(conditionsTextUrl) || conditionsText
+  if (finalConditionsText) {
+    conditionsHtml = `
+      <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #3498db; border-radius: 0 5px 5px 0;">
+        <h3 style="color: #2c3e50; margin-top: 0;">Richtlinien</h3>
+        <div>${finalConditionsText}</div>
+      </div>
+    `
   }
 
-  if (additionalEmailTextUrl) {
-    const additionalEmailText = resolveUrl(additionalEmailTextUrl)
-    if (additionalEmailText) {
-      additionalEmailHtml = `
-        <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 0 5px 5px 0;">
-          <h3 style="color: #856404; margin-top: 0;">Weitere Informationen</h3>
-          <div>${additionalEmailText}</div>
-        </div>
-      `
-    }
+  const finalAdditionalEmailText =
+    resolveUrl(additionalEmailTextUrl) || additionalEmailText
+  if (finalAdditionalEmailText) {
+    additionalEmailHtml = `
+      <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 0 5px 5px 0;">
+        <h3 style="color: #856404; margin-top: 0;">Weitere Informationen</h3>
+        <div>${finalAdditionalEmailText}</div>
+      </div>
+    `
   }
 
   const htmlBody = `
@@ -391,9 +392,11 @@ const sendRegistrationEmails = (registrationData) => {
     const eventCategoryName = eventCategory.get('eventCategoryName')
     const supportEmail = eventCategory.get('supportEmail')
     const conditionsTextUrl = sellerNumberVariation.get('conditionsTextUrl')
+    const conditionsText = sellerNumberVariation.get('conditionsText')
     const additionalEmailTextUrl = sellerNumberVariation.get(
       'additionalEmailTextUrl'
     )
+    const additionalEmailText = sellerNumberVariation.get('additionalEmailText')
 
     // Debug logging
     $app
@@ -406,8 +409,12 @@ const sendRegistrationEmails = (registrationData) => {
         supportEmail,
         'conditionsTextUrl',
         conditionsTextUrl,
+        'conditionsText',
+        conditionsText,
         'additionalEmailTextUrl',
-        additionalEmailTextUrl
+        additionalEmailTextUrl,
+        'additionalEmailText',
+        additionalEmailText
       )
 
     // Send support notification
@@ -430,7 +437,9 @@ const sendRegistrationEmails = (registrationData) => {
       sellerPhone,
       sellerNumberNumber,
       conditionsTextUrl,
+      conditionsText,
       additionalEmailTextUrl,
+      additionalEmailText,
     })
   } catch (error) {
     $app.logger().error('Error sending registration emails', 'error', error)
