@@ -15,19 +15,23 @@ const EventCategorySchema = z.object({
   sessionTimeInSec: z.number().int().positive(),
   domain: z.string(),
   supportEmail: z.string(),
+  favicon: z.string(),
 })
 
 const getEventCategory = async (eventCategoryId: string) => {
-  const eventCategory = EventCategorySchema.parse(
-    await pb.collection('eventCategories').getOne(eventCategoryId, {
-      fields: Object.keys(EventCategorySchema.shape).join(','),
-    })
-  )
-  return await withUrlResolving(eventCategory, {
+  const response = await pb
+    .collection('eventCategories')
+    .getOne(eventCategoryId)
+  const eventCategory = EventCategorySchema.parse(response)
+  const eventCategoryWithResolvedUrls = await withUrlResolving(eventCategory, {
     resolverMap: {
       introTextUrl: 'introText',
     },
   })
+  return {
+    ...eventCategoryWithResolvedUrls,
+    raw: response,
+  }
 }
 
 export const useEventCategoryQuery = () => {
