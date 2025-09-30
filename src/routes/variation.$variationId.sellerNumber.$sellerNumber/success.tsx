@@ -35,7 +35,7 @@ function RouteComponent() {
   return (
     <IsLoadingProvider isLoading={!sellerNumbers || !sellerDetails}>
       <PageCard title="Das hat geklappt">
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-6 space-y-6 overflow-y-auto">
           {/* Big first line with the seller number */}
           <div className="text-center">
             <h1 className="text-3xl font-bold mb-4">
