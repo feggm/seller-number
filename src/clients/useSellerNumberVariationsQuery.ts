@@ -40,7 +40,9 @@ export const useSellerNumberVariationsQuery = () => {
 
   return useQuery({
     queryKey: ['sellerNumberVariations', eventCategoryId],
-    queryFn: withErrorLogging(() => getSellerNumberVariations(eventCategoryId)),
+    queryFn: withErrorLogging(async function getSellerNumberVariationsQuery() {
+      return getSellerNumberVariations(eventCategoryId)
+    }),
     staleTime: Infinity,
   })
 }

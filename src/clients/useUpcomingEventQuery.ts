@@ -31,7 +31,9 @@ const getUpcomingEvent = async (eventCategoryId: string) => {
 export const upcomingEventQueryOptions = (eventCategoryId: string) =>
   ({
     queryKey: ['upcomingEvent', eventCategoryId],
-    queryFn: withErrorLogging(() => getUpcomingEvent(eventCategoryId)),
+    queryFn: withErrorLogging(async function getUpcomingEventQuery() {
+      return getUpcomingEvent(eventCategoryId)
+    }),
     staleTime: Infinity,
   }) satisfies UseQueryOptions
 

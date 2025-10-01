@@ -39,7 +39,9 @@ export const useEventCategoryQuery = () => {
 
   return useQuery({
     queryKey: ['eventCategory', eventCategoryId],
-    queryFn: withErrorLogging(() => getEventCategory(eventCategoryId)),
+    queryFn: withErrorLogging(async function getEventCategoryQuery() {
+      return getEventCategory(eventCategoryId)
+    }),
     enabled: !!eventCategoryId,
     staleTime: Infinity,
   })
@@ -70,7 +72,9 @@ const getEventCategoryByDomain = async (domain: string) => {
 export const useEventCategoryByDomainQuery = (domain: string | undefined) => {
   return useQuery({
     queryKey: ['eventCategoryByDomain', domain],
-    queryFn: withErrorLogging(() => getEventCategoryByDomain(domain ?? '')),
+    queryFn: withErrorLogging(async function getEventCategoryByDomainQuery() {
+      return getEventCategoryByDomain(domain ?? '')
+    }),
     enabled: !!domain,
     staleTime: Infinity,
   })

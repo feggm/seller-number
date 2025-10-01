@@ -52,7 +52,11 @@ const registerSellerNumber = async (
 
 export const useSellerNumberRegistrationMutation = () => {
   return useMutation({
-    mutationFn: withErrorLogging(registerSellerNumber),
+    mutationFn: withErrorLogging(async function registerSellerNumberMutation(
+      request: z.infer<typeof RegistrationRequestSchema>
+    ) {
+      return registerSellerNumber(request)
+    }),
   })
 }
 

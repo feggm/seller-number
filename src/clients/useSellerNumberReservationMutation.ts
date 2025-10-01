@@ -80,6 +80,10 @@ export const useSellerNumberReservationMutation = () => {
   )
 
   return useMutation({
-    mutationFn: withErrorLogging(reserveSellerNumber(waitForUpdates)),
+    mutationFn: withErrorLogging(async function reserveSellerNumberMutation(
+      request: z.infer<typeof ReservationRequestSchema>
+    ) {
+      return reserveSellerNumber(waitForUpdates)(request)
+    }),
   })
 }

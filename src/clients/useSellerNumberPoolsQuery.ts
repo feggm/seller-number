@@ -77,9 +77,9 @@ export const sellerNumberPoolsQueryOptions = ({
   queryClient: QueryClient
 }) => ({
   queryKey: ['sellerNumberPools', eventCategoryId],
-  queryFn: withErrorLogging(() =>
-    getSellerNumberPools(eventCategoryId, queryClient)
-  ),
+  queryFn: withErrorLogging(async function getSellerNumberPoolsQuery() {
+    return getSellerNumberPools(eventCategoryId, queryClient)
+  }),
   staleTime: Infinity,
 })
 

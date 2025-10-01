@@ -57,12 +57,12 @@ export const useSellerNumbersQuery = () => {
 
   const query = useQuery({
     queryKey: ['sellerNumbers', eventCategoryId],
-    queryFn: withErrorLogging(() =>
-      getSellerNumbers({
+    queryFn: withErrorLogging(async function getSellerNumbersQuery() {
+      return getSellerNumbers({
         eventCategoryId,
         queryClient,
       })
-    ),
+    }),
     staleTime: Infinity,
   })
 

@@ -13,6 +13,9 @@ import './index.css'
 import { queryClient } from './lib/queryClient'
 import { initializeTimeSync } from './lib/timeSync'
 import { routeTree } from './routeTree.gen'
+import { initSentry } from './sentry'
+
+initSentry()
 
 const hashHistory = createHashHistory()
 
