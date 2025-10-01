@@ -213,8 +213,9 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
       return e.json(404, { error: 'No obtainable numbers found' })
     }
 
-    // Select the next obtainable number (first one)
-    const selectedNumber = obtainableNumbers[0]
+    // Select randomly one obtainable number
+    const randomIndex = Math.floor(Math.random() * obtainableNumbers.length)
+    const selectedNumber = obtainableNumbers[randomIndex]
 
     let sellerNumberRecord
 
