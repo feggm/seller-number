@@ -19,7 +19,6 @@ export const useDynamicFaviconAndTitle = () => {
   // Update favicon
   useEffect(() => {
     const updateFavicon = (href: string) => {
-      console.log('Updating favicon to:', href)
       let link = document.querySelector('link[rel="icon"]')
 
       if (!link) {
@@ -32,7 +31,6 @@ export const useDynamicFaviconAndTitle = () => {
     }
 
     if (eventCategory?.favicon) {
-      console.log(eventCategory.raw)
       try {
         const faviconUrl = pb.files.getURL(
           eventCategory.raw,
@@ -40,7 +38,10 @@ export const useDynamicFaviconAndTitle = () => {
         )
         updateFavicon(faviconUrl)
       } catch (error) {
-        console.warn('Failed to generate favicon URL, using default:', error)
+        console.warn(
+          'Failed to generate favicon URL, using default. Error:',
+          error
+        )
         updateFavicon('')
       }
     } else {
