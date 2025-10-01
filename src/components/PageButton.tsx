@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import { ReactNode } from 'react'
+import { ReactNode, useCallback } from 'react'
 
 import { Button } from './ui/button'
 
@@ -14,8 +14,19 @@ export const PageButton = ({
   counter,
   isLoading = false,
   className,
+  onClick,
   ...props
 }: PageButtonProps) => {
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isLoading || props.disabled) {
+        e.preventDefault()
+        return
+      }
+      onClick?.(e)
+    },
+    [isLoading, props.disabled, onClick]
+  )
   return (
     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
       <Button
@@ -25,6 +36,7 @@ export const PageButton = ({
           'relative bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 shadow-sm px-5 py-6 h-auto font-medium uppercase rounded-lg ',
           className
         )}
+        onClick={handleClick}
         {...props}
       >
         {children}
