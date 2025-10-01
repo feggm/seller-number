@@ -65,24 +65,28 @@ function RouteComponent() {
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium">Vorname</TableCell>
-                    <TableCell>
+                    <TableCell className="sentry-mask">
                       {sellerDetails.request.sellerFirstName}
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium">Nachname</TableCell>
-                    <TableCell>
+                    <TableCell className="sentry-mask">
                       {sellerDetails.request.sellerLastName}
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium">E-Mail</TableCell>
-                    <TableCell>{sellerDetails.request.sellerEmail}</TableCell>
+                    <TableCell className="sentry-mask">
+                      {sellerDetails.request.sellerEmail}
+                    </TableCell>
                   </TableRow>
                   {sellerDetails.request.sellerPhone && (
                     <TableRow>
                       <TableCell className="font-medium">Telefon</TableCell>
-                      <TableCell>{sellerDetails.request.sellerPhone}</TableCell>
+                      <TableCell className="sentry-mask">
+                        {sellerDetails.request.sellerPhone}
+                      </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -94,10 +98,12 @@ function RouteComponent() {
           <div className="bg-blue-50 -mx-3 p-3 rounded-lg">
             <ProseText>
               Bitte beachte: Du bekommst eine E-Mail an{' '}
-              <strong>{sellerDetails?.request.sellerEmail}</strong>, wo alle
-              wichtigen Daten noch einmal enthalten sind. Falls du keine E-Mail
-              bekommst, überprüfe dein Spam Filter. Wenn alles nicht hilft,
-              wende dich an{' '}
+              <strong className="sentry-mask">
+                {sellerDetails?.request.sellerEmail}
+              </strong>
+              , wo alle wichtigen Daten noch einmal enthalten sind. Falls du
+              keine E-Mail bekommst, überprüfe dein Spam Filter. Wenn alles
+              nicht hilft, wende dich an{' '}
               <a
                 href={`mailto:${eventCategoryData?.supportEmail ?? ''}`}
                 className="text-blue-600 underline"

@@ -4,6 +4,7 @@ import { CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { usePageTitle } from '@/context/PageTitleContext'
 import { useDeviceUuid } from '@/hooks/useDeviceUuid'
+import { cn } from '@/lib/utils'
 import { useForm } from '@tanstack/react-form'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
@@ -104,9 +105,10 @@ function RouteComponent() {
                     field.handleChange(e.target.value)
                   }}
                   placeholder="Dein Vorname"
-                  className={
-                    field.state.meta.errors.length > 0 ? 'border-red-500' : ''
-                  }
+                  className={cn(
+                    'sentry-mask',
+                    field.state.meta.errors.length > 0 && 'border-red-500'
+                  )}
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-red-500 text-sm mt-1">
@@ -140,9 +142,10 @@ function RouteComponent() {
                     field.handleChange(e.target.value)
                   }}
                   placeholder="Dein Nachname"
-                  className={
-                    field.state.meta.errors.length > 0 ? 'border-red-500' : ''
-                  }
+                  className={cn(
+                    'sentry-mask',
+                    field.state.meta.errors.length > 0 && 'border-red-500'
+                  )}
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-red-500 text-sm mt-1">
@@ -177,9 +180,10 @@ function RouteComponent() {
                     field.handleChange(e.target.value)
                   }}
                   placeholder="deine.email@example.com"
-                  className={
-                    field.state.meta.errors.length > 0 ? 'border-red-500' : ''
-                  }
+                  className={cn(
+                    'sentry-mask',
+                    field.state.meta.errors.length > 0 && 'border-red-500'
+                  )}
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-red-500 text-sm mt-1">
@@ -214,9 +218,10 @@ function RouteComponent() {
                     field.handleChange(e.target.value)
                   }}
                   placeholder="+49 123 456789 (optional)"
-                  className={
-                    field.state.meta.errors.length > 0 ? 'border-red-500' : ''
-                  }
+                  className={cn(
+                    'sentry-mask',
+                    field.state.meta.errors.length > 0 && 'border-red-500'
+                  )}
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-red-500 text-sm mt-1">
