@@ -6,12 +6,13 @@ export const withErrorLogging = <
   fn: TFunction
 ): TFunction => {
   return (async (...args: Parameters<TFunction>) => {
+    const functionName = fn.name || 'anonymous function'
     return await Sentry.startSpan(
       {
-        name: fn.name || 'anonymous function',
-        op: fn.name?.includes('Query')
+        name: functionName,
+        op: functionName.includes('Query')
           ? 'db.query'
-          : fn.name?.includes('Mutation')
+          : functionName.includes('Mutation')
             ? 'db.mutation'
             : 'function.call',
       },
