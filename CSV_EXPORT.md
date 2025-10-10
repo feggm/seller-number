@@ -60,7 +60,7 @@ Before using this endpoint, you must authenticate as an admin and obtain an auth
 ### Step 1: Authenticate as Admin/Superuser
 ```bash
 # Authenticate and get the token
-curl -X POST http://localhost:8090/api/collections/_superusers/auth-with-password \
+curl -X POST https://reg.anziehbar-gummersbach.de/api/collections/_superusers/auth-with-password \
   -H "Content-Type: application/json" \
   -d '{
     "identity": "admin@example.com",
@@ -83,14 +83,14 @@ Include the token in the `Authorization` header with the `Bearer` prefix.
 
 ### Basic Export (KKM mode)
 ```bash
-curl "http://localhost:8090/api/seller-number/export-csv?eventId=abc123xyz" \
+curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=abc123xyz" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" \
   -o seller-numbers.csv
 ```
 
 ### Export in AZB mode
 ```bash
-curl "http://localhost:8090/api/seller-number/export-csv?eventId=abc123xyz&mode=azb" \
+curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=abc123xyz&mode=azb" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN_HERE" \
   -o seller-numbers-azb.csv
 ```
@@ -98,12 +98,12 @@ curl "http://localhost:8090/api/seller-number/export-csv?eventId=abc123xyz&mode=
 ### One-liner: Authenticate and Export
 ```bash
 # Extract token and use it in one command (PocketBase 0.30.0+)
-TOKEN=$(curl -X POST http://localhost:8090/api/collections/_superusers/auth-with-password \
+TOKEN=$(curl -X POST https://reg.anziehbar-gummersbach.de/api/collections/_superusers/auth-with-password \
   -H "Content-Type: application/json" \
   -d '{"identity":"admin@example.com","password":"your_password"}' \
   | jq -r '.token')
 
-curl "http://localhost:8090/api/seller-number/export-csv?eventId=abc123xyz&mode=kkm" \
+curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=abc123xyz&mode=kkm" \
   -H "Authorization: Bearer $TOKEN" \
   -o seller-numbers.csv
 ```
