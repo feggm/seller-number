@@ -51,6 +51,7 @@ Exports with the following CSV columns:
 | `vorname` | First name | ✅ Available |
 | `ab-status` | AB-Status | ⚠️ Empty (not in DB) |
 | `tel` | Phone number | ✅ Available |
+| `email` | Email address | ✅ Available |
 | `ma` | Employee flag | ⚠️ Empty (not in DB) |
 
 ## Authentication

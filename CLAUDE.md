@@ -117,7 +117,7 @@ const field = data.field
 - **Output**: CSV file download
 - **CSV Headers**:
   - **kkm mode**: `nr`, `dnr`, `babynr`, `name`, `vorname`, `Strasse`, `plz`, `ort`, `tel`, `email`, `interesse_dnr`, `neu`, `ma`
-  - **azb mode**: `nr`, `name`, `vorname`, `ab-status`, `tel`, `ma`
+  - **azb mode**: `nr`, `name`, `vorname`, `ab-status`, `tel`, `email`, `ma`
 - **Available Data**: Currently exports `nr` (seller number), `name` (last name), `vorname` (first name), `tel` (phone), `email`. Other fields are left empty as they are not yet implemented in the database.
 - **Security**: This endpoint contains sensitive personal data (names, phone numbers, emails) and requires admin authentication. Returns 401 Unauthorized if not authenticated as admin.
 - **Logic**: Fetches all seller numbers for an event that have completed registration (associated seller details), formats as CSV
