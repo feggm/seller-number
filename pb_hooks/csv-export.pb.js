@@ -101,7 +101,7 @@ routerAdd('GET', '/api/seller-number/export-csv', (e) => {
         'ma',
       ]
     } else if (mode === 'azb') {
-      headers = ['nr', 'name', 'vorname', 'ab-status', 'tel', 'ma']
+      headers = ['nr', 'name', 'vorname', 'ab-status', 'tel', 'email', 'ma']
     }
 
     // Add CSV header row
@@ -160,6 +160,7 @@ routerAdd('GET', '/api/seller-number/export-csv', (e) => {
         row.push(escapeCSV(firstName)) // vorname
         row.push('') // ab-status (not available)
         row.push(escapeCSV(phone)) // tel
+        row.push(escapeCSV(email)) // email
         row.push('') // ma (not available)
       }
 
