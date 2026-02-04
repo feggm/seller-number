@@ -29,7 +29,7 @@ const getErrorMessage = (error: unknown): string => {
     return errorWithMessageParseResult.data.message
   }
 
-  return 'An unexpected error occurred'
+  return 'Ein unerwarteter Fehler ist aufgetreten'
 }
 
 export const queryClient = new QueryClient({
@@ -37,7 +37,7 @@ export const queryClient = new QueryClient({
     onError: (error) => {
       console.error('Query error:', error)
       const errorMessage = getErrorMessage(error)
-      toast.error('Failed to load data', {
+      toast.error('Da ist was schiefgelaufen', {
         description: errorMessage,
         richColors: true,
       })

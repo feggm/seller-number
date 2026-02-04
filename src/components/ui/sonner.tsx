@@ -4,6 +4,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
+      closeButton
+      position="top-right"
       style={
         {
           '--normal-bg': 'var(--popover)',
