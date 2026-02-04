@@ -2,6 +2,7 @@ import { getSyncedNow } from '@/lib/timeSync'
 import { useMutation } from '@tanstack/react-query'
 import mitt from 'mitt'
 import { useCallback, useEffect, useRef } from 'react'
+import { useLatest } from 'react-use'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
@@ -50,6 +51,13 @@ export const useSellerNumberReservationMutation = () => {
     emitter.emit('sellerNumbersChanged', sellerNumbers)
   }, [sellerNumbers, emitter])
 
+  const sellerNumberRef = useLatest(sellerNumbers)
+
+  const retriggerEmitter = useCallback(() => {
+    if (!sellerNumberRef.current) return
+    emitter.emit('sellerNumbersChanged', sellerNumberRef.current)
+  }, [emitter, sellerNumberRef])
+
   const waitForUpdates = useCallback(
     (response: z.infer<typeof ReservationResponseSchema>) => {
       return new Promise<void>((resolve) => {
@@ -74,9 +82,10 @@ export const useSellerNumberReservationMutation = () => {
           }
         }
         emitter.on('sellerNumbersChanged', onSellerNumbersChange)
+        retriggerEmitter()
       })
     },
-    [emitter]
+    [emitter, retriggerEmitter]
   )
 
   return useMutation({

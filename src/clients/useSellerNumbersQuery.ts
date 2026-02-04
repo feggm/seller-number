@@ -1,6 +1,7 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { useCurrentTime } from '@/hooks/useCurrentTime'
 import { queryClient } from '@/lib/queryClient'
+import * as Sentry from '@sentry/react'
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { z } from 'zod'
@@ -56,7 +57,7 @@ export const useSellerNumbersQuery = () => {
   const { data: eventCategoryData } = useEventCategoryQuery()
 
   const query = useQuery({
-    queryKey: ['sellerNumbers', eventCategoryId],
+    queryKey: ['sellerNumbers'],
     queryFn: withErrorLogging(async function getSellerNumbersQuery() {
       return getSellerNumbers({
         eventCategoryId,
@@ -90,5 +91,44 @@ const invalidateSellerNumbersQuery = () => {
     queryKey: ['sellerNumbers'],
   })
 }
-void pb.collection('sellerNumbers').subscribe('*', invalidateSellerNumbersQuery)
+void pb.collection('sellerNumbers').subscribe('*', ({ action, record }) => {
+  const { data, error } = SellerNumberSchema.array().safeParse(
+    queryClient.getQueryData(['sellerNumbers'])
+  )
+  if (error) {
+    console.error('Failed to parse seller numbers from query cache', { error })
+    Sentry.captureException(error)
+    invalidateSellerNumbersQuery()
+    return
+  }
+
+  switch (action) {
+    case 'create': {
+      const newRecord = SellerNumberSchema.parse(record)
+      queryClient.setQueryData(['sellerNumbers'], [...data, newRecord])
+      break
+    }
+    case 'update': {
+      const updatedRecord = SellerNumberSchema.parse(record)
+      queryClient.setQueryData(
+        ['sellerNumbers'],
+        data.map((item) =>
+          item.id === updatedRecord.id ? updatedRecord : item
+        )
+      )
+      break
+    }
+    case 'delete': {
+      queryClient.setQueryData(
+        ['sellerNumbers'],
+        data.filter((item) => item.id !== record.id)
+      )
+      break
+    }
+    default:
+      console.error(`Unknown action type: ${action}`)
+      Sentry.captureMessage(`Unknown action type: ${action}`)
+      invalidateSellerNumbersQuery()
+  }
+})
 onPoll(invalidateSellerNumbersQuery)
