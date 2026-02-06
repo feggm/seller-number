@@ -142,103 +142,109 @@ routerAdd('POST', '/api/seller-number/reservation', (e) => {
       return [...new Set(resolved)]
     }
 
-    // Get all existing seller numbers for these pools
-    const poolIds = sellerNumberPools.map((pool) => pool.get('id'))
-    let existingSellerNumbers = []
-    if (poolIds.length > 0) {
-      try {
-        existingSellerNumbers = $app.findRecordsByFilter(
-          'sellerNumbers',
-          'sellerNumberPool = "' +
-            poolIds.join('" || sellerNumberPool = "') +
-            '"',
-          '',
-          0,
-          0
-        )
-      } catch (error) {
-        // No existing seller numbers found, continue with empty array
-        existingSellerNumbers = []
+    // START TRANSACTION - lock from here to prevent race conditions
+    let sellerNumberRecord
+    $app.runInTransaction((txApp) => {
+      // Get all existing seller numbers for these pools
+      const poolIds = sellerNumberPools.map((pool) => pool.get('id'))
+      let existingSellerNumbers = []
+      if (poolIds.length > 0) {
+        try {
+          existingSellerNumbers = txApp.findRecordsByFilter(
+            'sellerNumbers',
+            'sellerNumberPool = "' +
+              poolIds.join('" || sellerNumberPool = "') +
+              '"',
+            '',
+            0,
+            0
+          )
+        } catch (error) {
+          // No existing seller numbers found, continue with empty array
+          existingSellerNumbers = []
+        }
       }
-    }
 
-    // Find all obtainable numbers
-    const obtainableNumbers = []
+      // Find all obtainable numbers
+      const obtainableNumbers = []
 
-    for (const pool of sellerNumberPools) {
-      const resolvedNumbers = resolveNumbers(
-        JSON.parse(pool.get('numbersAsJsonArray'))
-      )
-
-      for (const resolvedNumber of resolvedNumbers) {
-        const existingSellerNumber = existingSellerNumbers.find(
-          (sn) =>
-            sn.get('sellerNumberNumber') === resolvedNumber &&
-            sn.get('sellerNumberPool') === pool.get('id')
+      for (const pool of sellerNumberPools) {
+        const resolvedNumbers = resolveNumbers(
+          JSON.parse(pool.get('numbersAsJsonArray'))
         )
 
-        if (!existingSellerNumber) {
-          // Number doesn't exist, it's obtainable
-          obtainableNumbers.push({
-            number: resolvedNumber,
-            poolId: pool.get('id'),
-            sellerNumber: null,
-          })
-        } else {
-          // Check if it's obtainable (not reserved or has seller details)
-          const reservedAt = existingSellerNumber.get('reservedAt')
-          const sellerDetails = existingSellerNumber.get('sellerDetails')
+        for (const resolvedNumber of resolvedNumbers) {
+          const existingSellerNumber = existingSellerNumbers.find(
+            (sn) =>
+              sn.get('sellerNumberNumber') === resolvedNumber &&
+              sn.get('sellerNumberPool') === pool.get('id')
+          )
 
-          let isObtainable = !sellerDetails
-
-          if (reservedAt && eventCategory.get('sessionTimeInSec')) {
-            const timeDiff =
-              (new Date().getTime() - new Date(reservedAt).getTime()) / 1000
-            isObtainable =
-              isObtainable && timeDiff > eventCategory.get('sessionTimeInSec')
-          }
-
-          if (isObtainable) {
+          if (!existingSellerNumber) {
+            // Number doesn't exist, it's obtainable
             obtainableNumbers.push({
               number: resolvedNumber,
               poolId: pool.get('id'),
-              sellerNumber: existingSellerNumber,
+              sellerNumber: null,
             })
+          } else {
+            // Check if it's obtainable (not reserved or has seller details)
+            const reservedAt = existingSellerNumber.get('reservedAt')
+            const sellerDetails = existingSellerNumber.get('sellerDetails')
+
+            let isObtainable = !sellerDetails
+
+            if (reservedAt && eventCategory.get('sessionTimeInSec')) {
+              const timeDiff =
+                (new Date().getTime() - new Date(reservedAt).getTime()) / 1000
+              isObtainable =
+                isObtainable && timeDiff > eventCategory.get('sessionTimeInSec')
+            }
+
+            if (isObtainable) {
+              obtainableNumbers.push({
+                number: resolvedNumber,
+                poolId: pool.get('id'),
+                sellerNumber: existingSellerNumber,
+              })
+            }
           }
         }
       }
-    }
 
-    if (obtainableNumbers.length === 0) {
-      return e.json(404, { error: 'No obtainable numbers found' })
-    }
+      if (obtainableNumbers.length === 0) {
+        throw new BadRequestError('No obtainable numbers found')
+      }
 
-    // Select randomly one obtainable number
-    const randomIndex = Math.floor(Math.random() * obtainableNumbers.length)
-    const selectedNumber = obtainableNumbers[randomIndex]
+      // Select randomly one obtainable number
+      const randomIndex = Math.floor(Math.random() * obtainableNumbers.length)
+      const selectedNumber = obtainableNumbers[randomIndex]
 
-    let sellerNumberRecord
+      if (selectedNumber.sellerNumber) {
+        // Delete existing record and create new one
+        txApp.delete(selectedNumber.sellerNumber)
+      }
 
-    if (selectedNumber.sellerNumber) {
-      // Delete existing record and create new one
-      $app.delete(selectedNumber.sellerNumber)
-    }
-
-    // Create new record
-    const collection = $app.findCollectionByNameOrId('sellerNumbers')
-    sellerNumberRecord = new Record(collection)
-    sellerNumberRecord.set('sellerNumberNumber', selectedNumber.number)
-    sellerNumberRecord.set('sellerNumberPool', selectedNumber.poolId)
-    sellerNumberRecord.set('reservedAt', new Date().toISOString())
-    sellerNumberRecord.set('sellerDetails', '')
-    $app.save(sellerNumberRecord)
+      // Create new record
+      const collection = $app.findCollectionByNameOrId('sellerNumbers')
+      sellerNumberRecord = new Record(collection)
+      sellerNumberRecord.set('sellerNumberNumber', selectedNumber.number)
+      sellerNumberRecord.set('sellerNumberPool', selectedNumber.poolId)
+      sellerNumberRecord.set('reservedAt', new Date().toISOString())
+      sellerNumberRecord.set('sellerDetails', '')
+      txApp.save(sellerNumberRecord)
+    })
 
     return e.json(200, { sellerNumberId: sellerNumberRecord.get('id') })
   } catch (error) {
     console.error(error)
-    $app.logger().error('Error in reservation endpoint', 'error', error)
+    $app.logger().error('Error in reservation endpoint', 'error', {
+      message: error.message,
+      stack: error.stack,
+    })
     return e.json(500, {
       error: 'Internal server error',
+      details: error.message,
     })
   }
 })
