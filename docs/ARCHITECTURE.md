@@ -91,8 +91,19 @@ whatever proxy sits in front of it. A global `routerUse` middleware sets it expl
 hashed chunks. If it is cached, the browser keeps resolving the *previous* build's chunk names
 out of its own cache and the old app keeps running after a deploy — so it must revalidate.
 
-A CDN in front of this can still override these headers. Cloudflare's *Browser Cache TTL*
-does exactly that unless it is set to **Respect Existing Headers**.
+Production sits behind Cloudflare, which passes these headers through unchanged — verified
+after deploying the hook:
+
+```
+$ curl -sI https://reg.kleidermarkt-gummersbach.de/
+cache-control: no-cache
+cf-cache-status: REVALIDATED
+```
+
+`REVALIDATED` is the desired state: Cloudflare still holds `index.html` at the edge but
+revalidates it against the origin on every request, so a stale copy is never served. No
+dashboard configuration is needed. Before this hook existed the origin sent no header at all,
+and Cloudflare filled in `max-age=86400` — which is where the stale-build problem came from.
 
 ## API endpoints
 
