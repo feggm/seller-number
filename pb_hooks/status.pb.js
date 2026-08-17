@@ -226,6 +226,19 @@ routerAdd('GET', '/api/seller-number/status', (e) => {
       const sessionTimeInSec = category.get('sessionTimeInSec')
       const categoryEvents = eventsByCategoryId[categoryId] || []
 
+      if (categoryEvents.length === 0) {
+        warnings.push({
+          scope: 'eventCategory',
+          id: categoryId,
+          message:
+            'Category "' +
+            category.get('eventCategoryName') +
+            '" has no upcoming event' +
+            (category.get('domain') ? ' — ' + category.get('domain') : '') +
+            ' cannot hand out a number; reservations fail with "No upcoming event found".',
+        })
+      }
+
       if (!sessionTimeInSec) {
         warnings.push({
           scope: 'eventCategory',
@@ -332,7 +345,7 @@ routerAdd('GET', '/api/seller-number/status', (e) => {
         return {
           id: eventId,
           name: event.get('eventName'),
-          eventDate: formatBerlin(event.get('eventDate'), { dateOnly: true }),
+          eventDate: formatBerlin(event.get('eventDate'), { dateOnlyAtMidnight: true }),
           isFrontendTarget: eventId === frontendTargetId,
           isReservationTarget: eventId === reservationTargetId,
           numbers: eventNumbers,

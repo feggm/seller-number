@@ -47,6 +47,12 @@ const toDate = (value) => {
   return isNaN(date.getTime()) ? null : date
 }
 
+const isMidnightUTC = (date) =>
+  date.getUTCHours() === 0 &&
+  date.getUTCMinutes() === 0 &&
+  date.getUTCSeconds() === 0 &&
+  date.getUTCMilliseconds() === 0
+
 /**
  * Format a timestamp for the status report.
  *
@@ -54,14 +60,17 @@ const toDate = (value) => {
  *   { local: '2026-09-01T18:00:00+02:00', utc: '2026-09-01T16:00:00.000Z',
  *     display: '01.09.2026, 18:00 Uhr', offset: '+02:00', abbreviation: 'CEST' }
  *
- * `dateOnly: true` drops the time from `display`. Use it for `events.eventDate`, which is
- * stored at midnight UTC and would otherwise read as '14.09.2026, 02:00 Uhr'.
+ * `dateOnlyAtMidnight: true` drops the time from `display` — but only when the stored value
+ * is exactly midnight UTC, i.e. a date with no meaningful time of day. Use it for
+ * `events.eventDate`: a date-only entry would otherwise read as '14.09.2026, 02:00 Uhr' once
+ * shifted to Berlin, while an event that really does start at 15:30 still shows its time.
+ * `local` and `utc` always carry the full timestamp either way.
  */
 const formatBerlin = (value, options) => {
   const date = toDate(value)
   if (!date) return null
 
-  const dateOnly = !!(options && options.dateOnly)
+  const dateOnly = !!(options && options.dateOnlyAtMidnight) && isMidnightUTC(date)
   const offsetMinutes = berlinOffsetMinutes(date)
   const shifted = new Date(date.getTime() + offsetMinutes * 60 * 1000)
 

@@ -174,12 +174,17 @@ Every timestamp is an object rather than a bare string, rendered in Europe/Berli
 }
 ```
 
-`eventDate` is stored at midnight UTC, so its `display` is date-only (`14.09.2026`) to avoid
-rendering as `02:00 Uhr`.
+`eventDate` is passed with `dateOnlyAtMidnight`, which drops the time from `display` **only**
+when the stored value is exactly midnight UTC — a date with no meaningful time of day, which
+would otherwise read as `14.09.2026, 02:00 Uhr` once shifted to Berlin. An event that really
+does start at 15:30 keeps its time (`25.09.2026, 15:30 Uhr`). `local` and `utc` always carry
+the full timestamp either way.
 
 Configuration problems are reported in a top-level `warnings` array rather than failing the
 request — a pool whose `numbersAsJsonArray` is unparseable yields `"numbers": null` plus a
-warning, and the rest of the report still renders. Each event also carries `isFrontendTarget`
+warning, and the rest of the report still renders. A category with no upcoming events warns
+too: its domain cannot hand out a number at all, since reservations there fail with
+`No upcoming event found`. Each event also carries `isFrontendTarget`
 (nearest upcoming, what the UI offers) and `isReservationTarget` (furthest upcoming, what
 `reservation.pb.js` actually reserves against); when they diverge the endpoint warns, surfacing
 the sort mismatch tracked in [`../ToDo.md`](../ToDo.md).
