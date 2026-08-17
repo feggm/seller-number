@@ -36,5 +36,5 @@ export const getOS = (): OSString => {
     if (arch === 'arm64') return 'windows_arm64'
   }
 
-  throw new Error(`Unsupported platform: ${String(platform)} ${String(arch)}`)
+  throw new Error(`Unsupported platform: ${platform} ${arch}`)
 }
