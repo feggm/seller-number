@@ -83,6 +83,9 @@ scripts/          PocketBase installer + SSH deploy
 
 ## Further reading
 
-- [`CLAUDE.md`](./CLAUDE.md) — full technical reference: schema, every endpoint, code patterns
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — full technical reference: collection
+  schema, every endpoint, business logic, frontend structure, local API testing
 - [`CSV_EXPORT.md`](./CSV_EXPORT.md) — CSV export columns and usage
+- [`CLAUDE.md`](./CLAUDE.md) — coding conventions and PocketBase pitfalls (written for AI
+  agents, but the gotchas apply to everyone)
 - [`ToDo.md`](./ToDo.md) — known issues
