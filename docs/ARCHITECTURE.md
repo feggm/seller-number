@@ -70,11 +70,13 @@ via ``require(`${__hooks}/name.js`)``.
 | `reservation.pb.js` | POST `/api/seller-number/reservation` |
 | `registration.pb.js` | POST `/api/seller-number/registration` |
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` |
+| `status.pb.js` | GET `/api/seller-number/status` |
 | `time.pb.js` | GET `/api/seller-number/now` |
 | `cors-proxy.pb.js` | GET `/api/seller-number/cors-proxy` |
 | `cache-headers.pb.js` | `routerUse` middleware: `Cache-Control` for the static frontend |
 | `email.js` | shared module: `sendRegistrationEmails` |
 | `cache.js` | shared in-memory cache, 10 min TTL |
+| `berlin-time.js` | shared module: `formatBerlin`, `berlinZoneInfo` — UTC → Europe/Berlin |
 
 ### Static asset caching (`pb_hooks/cache-headers.pb.js`)
 
@@ -141,6 +143,48 @@ and Cloudflare filled in `max-age=86400` — which is where the stale-build prob
 Column layouts, response examples, and error payloads are documented in
 [`../CSV_EXPORT.md`](../CSV_EXPORT.md). Only `nr`, `name`, `vorname`, `tel`, and `email` are
 populated; every other column is emitted empty because no DB field backs it yet.
+
+### GET /api/seller-number/status
+
+- **Auth**: **superuser required** (same gate as the CSV export), else 401
+- **Query params**: none
+- **Output**: JSON operational report — every event category, its events with `eventDate > now`,
+  their variations and pools, and per-pool number counts. Counts only, never seller PII.
+
+Per pool, each resolved number falls into exactly one bucket, applying the *same* rule as
+`reservation.pb.js` so the figures match what a seller would actually be offered:
+
+| Bucket | Meaning |
+|---|---|
+| `registered` | a `sellerNumbers` record exists with `sellerDetails` set |
+| `reserved` | held without `sellerDetails`, `reservedAt` age ≤ the category's `sessionTimeInSec` |
+| `available` | no record at all, **or** a hold whose session has expired |
+| `expiredHolds` | informational subset of `available` — stale holds that freed up |
+
+`registered + reserved + available === total`. Counts roll up per variation, per event, per
+category, and into a top-level `totals`.
+
+Every timestamp is an object rather than a bare string, rendered in Europe/Berlin via
+`berlin-time.js` (goja ships no `Intl`, so the EU DST rule is implemented directly):
+
+```json
+"obtainableFrom": {
+  "local": "2026-01-15T18:00:00+01:00", "utc": "2026-01-15T17:00:00.000Z",
+  "display": "15.01.2026, 18:00 Uhr", "offset": "+01:00", "abbreviation": "CET"
+}
+```
+
+`eventDate` is stored at midnight UTC, so its `display` is date-only (`14.09.2026`) to avoid
+rendering as `02:00 Uhr`.
+
+Configuration problems are reported in a top-level `warnings` array rather than failing the
+request — a pool whose `numbersAsJsonArray` is unparseable yields `"numbers": null` plus a
+warning, and the rest of the report still renders. Each event also carries `isFrontendTarget`
+(nearest upcoming, what the UI offers) and `isReservationTarget` (furthest upcoming, what
+`reservation.pb.js` actually reserves against); when they diverge the endpoint warns, surfacing
+the sort mismatch tracked in [`../ToDo.md`](../ToDo.md).
+
+Deliberately **not** cached — `cache.js` has a 10 minute TTL and stale counts would mislead.
 
 ### GET /api/seller-number/now
 
@@ -244,6 +288,13 @@ TOKEN=$(curl -s -X POST http://localhost:8090/api/collections/_superusers/auth-w
 
 curl "http://localhost:8090/api/seller-number/export-csv?eventId=your_event_id&mode=kkm" \
   -H "Authorization: Bearer $TOKEN" -o seller-numbers-kkm.csv
+
+# Status report — same superuser token
+curl -s http://localhost:8090/api/seller-number/status -H "Authorization: Bearer $TOKEN" | jq
+
+# Just the headline numbers
+curl -s http://localhost:8090/api/seller-number/status -H "Authorization: Bearer $TOKEN" \
+  | jq '{totals, warnings}'
 
 # Unauthenticated → {"error": "Unauthorized: Admin access required"}
 curl "http://localhost:8090/api/seller-number/export-csv?eventId=your_event_id"

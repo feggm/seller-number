@@ -43,6 +43,9 @@ The entire UI is in German.
   favicon, page title, session length and support email.
 - Organisers export the finished registrations as **CSV** (two column layouts, `kkm` and
   `azb`) from an admin-only endpoint.
+- An admin-only **status endpoint** reports the whole configuration as JSON — every upcoming
+  event, its pools, and how many numbers are registered, currently held, or still available —
+  with all times in local Berlin time.
 
 ## Tech stack
 
@@ -89,7 +92,7 @@ Other commands: `npm run typecheck`, `npm run lint`.
 ## Repository layout
 
 ```
-pb_hooks/         custom API endpoints (reservation, registration, CSV export, time, proxy)
+pb_hooks/         custom API endpoints (reservation, registration, CSV export, status, time, proxy)
 pb_migrations/    PocketBase schema history
 pb_public/        build output — served by PocketBase in production
 src/clients/      PocketBase access: one file per query/mutation, Zod-validated
