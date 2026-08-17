@@ -72,8 +72,27 @@ via ``require(`${__hooks}/name.js`)``.
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` |
 | `time.pb.js` | GET `/api/seller-number/now` |
 | `cors-proxy.pb.js` | GET `/api/seller-number/cors-proxy` |
+| `cache-headers.pb.js` | `routerUse` middleware: `Cache-Control` for the static frontend |
 | `email.js` | shared module: `sendRegistrationEmails` |
 | `cache.js` | shared in-memory cache, 10 min TTL |
+
+### Static asset caching (`pb_hooks/cache-headers.pb.js`)
+
+PocketBase serves `pb_public/` without a `Cache-Control` header, which leaves the policy to
+whatever proxy sits in front of it. A global `routerUse` middleware sets it explicitly:
+
+| Path | Header |
+|---|---|
+| `/assets/*` | `public, max-age=31536000, immutable` — Vite content-hashes these filenames |
+| everything else static | `no-cache` — revalidate on every load |
+| `/api/*`, `/_/*` | untouched (PocketBase's own headers; `/api/realtime` is a long-lived SSE stream) |
+
+`index.html` is the only file Vite does not content-hash, and it carries the references to the
+hashed chunks. If it is cached, the browser keeps resolving the *previous* build's chunk names
+out of its own cache and the old app keeps running after a deploy — so it must revalidate.
+
+A CDN in front of this can still override these headers. Cloudflare's *Browser Cache TTL*
+does exactly that unless it is set to **Respect Existing Headers**.
 
 ## API endpoints
 
