@@ -1,6 +1,7 @@
 import { useEventCategoryQuery } from '@/clients/useEventCategoryQuery'
 import { useSellerNumberReservationMutation } from '@/clients/useSellerNumberReservationMutation'
 import { useSellerNumberVariationsQuery } from '@/clients/useSellerNumberVariationsQuery'
+import { useUpcomingEventQuery } from '@/clients/useUpcomingEventQuery'
 import { IsLoadingProvider } from '@/components/LoadingSkeleton'
 import { PageButton } from '@/components/PageButton'
 import { PageCard } from '@/components/PageCard'
@@ -27,8 +28,17 @@ function Index() {
     isLoading: isObtainableNumbersLoading,
   } = useObtainableNumbers()
 
+  const {
+    data: upcomingEvent,
+    isLoading: isUpcomingEventLoading,
+    isSuccess: isUpcomingEventLoaded,
+  } = useUpcomingEventQuery()
+  const hasNoUpcomingEvent = isUpcomingEventLoaded && upcomingEvent === null
+
   const isVariationButtonsLoading =
-    isSellerNumberVariationsLoading || isObtainableNumbersLoading
+    isSellerNumberVariationsLoading ||
+    isObtainableNumbersLoading ||
+    isUpcomingEventLoading
 
   const variationsButtonData = sellerNumberVariationsData?.map(
     (variationData) => {
@@ -55,7 +65,15 @@ function Index() {
 
         <CardFooter className="flex flex-wrap gap-4 pt-2">
           {isVariationButtonsLoading && <Skeleton className="h-20 w-full" />}
-          {!!variationsButtonData &&
+          {!isVariationButtonsLoading && hasNoUpcomingEvent && (
+            <p className="text-slate-700 leading-relaxed">
+              Zurzeit ist kein Termin geplant, für den Verkäufernummern vergeben
+              werden. Schau bitte später noch einmal vorbei.
+            </p>
+          )}
+          {!isVariationButtonsLoading &&
+            !hasNoUpcomingEvent &&
+            !!variationsButtonData &&
             variationsButtonData.map(
               ({ id, obtainableCount, sellerNumberVariationName }) => (
                 <PageButton

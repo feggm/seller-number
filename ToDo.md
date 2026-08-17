@@ -10,7 +10,7 @@ event category has more than one future event.
 | Side | File | Query | Picks |
 |---|---|---|---|
 | Backend | `pb_hooks/reservation.pb.js` | `findRecordsByFilter('events', 'eventCategory = {:eventCategoryId} && eventDate > {:now}', '-eventDate', 1, 0)` | **furthest-future** event (descending sort, limit 1) |
-| Frontend | `src/clients/useUpcomingEventQuery.ts` | `getFirstListItem(..., { sort: 'eventDate' })` | **nearest** upcoming event (ascending sort) |
+| Frontend | `src/clients/useUpcomingEventQuery.ts` | `getList(1, 1, { sort: 'eventDate' })` | **nearest** upcoming event (ascending sort) |
 
 ### Impact
 With two or more future events per category, the reservation endpoint resolves pools for a

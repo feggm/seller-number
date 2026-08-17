@@ -51,9 +51,12 @@ const getSellerNumberPools = async (
   eventCategoryId: string,
   queryClient: QueryClient
 ) => {
-  const { id: eventId } = await queryClient.fetchQuery(
+  const upcomingEvent = await queryClient.fetchQuery(
     upcomingEventQueryOptions(eventCategoryId)
   )
+  if (!upcomingEvent) return []
+
+  const { id: eventId } = upcomingEvent
   return SellerNumberPoolSchema.array()
     .parse(
       await pb.collection('sellerNumberPools').getFullList({
