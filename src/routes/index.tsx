@@ -59,9 +59,11 @@ function Index() {
   return (
     <IsLoadingProvider isLoading={isLoading}>
       <PageCard title="Willkommen">
-        <CardContent className="p-6 space-y-6 overflow-y-auto">
-          <ProseText text={introText} />
-        </CardContent>
+        {!hasNoUpcomingEvent && (
+          <CardContent className="p-6 space-y-6 overflow-y-auto">
+            <ProseText text={introText} />
+          </CardContent>
+        )}
 
         <CardFooter className="flex flex-wrap gap-4 pt-2">
           {isVariationButtonsLoading && <Skeleton className="h-20 w-full" />}
