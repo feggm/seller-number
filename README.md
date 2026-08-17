@@ -68,7 +68,23 @@ Open the PocketBase admin UI at http://localhost:8090/_/ to create a superuser, 
 least one event category, an event with a future date, a number variation, and a number pool —
 the frontend needs all four before it can show anything.
 
-Other commands: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run deploy:ssh`.
+### Building for production
+
+```bash
+npm run build        # tsc -b && vite build → pb_public/
+npm start            # PocketBase on :8090, serving pb_public/ and the API
+```
+
+`npm run build` type-checks the project and writes the bundled frontend into `pb_public/`.
+There is no separate frontend server in production: `npm start` runs the same PocketBase binary
+that serves the API and hands out the files from `pb_public/`. Run the build before starting —
+`npm start` serves whatever is in `pb_public/` at that moment, including a stale build.
+
+`npm run deploy:ssh` does not use your local build: it connects to the configured host, pulls
+the latest commit, installs dependencies, runs `npm run build` **there**, and restarts the app
+via supervisor.
+
+Other commands: `npm run typecheck`, `npm run lint`.
 
 ## Repository layout
 
