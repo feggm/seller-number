@@ -9,6 +9,8 @@ registration — which stores their details and triggers confirmation emails. Al
 
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — collection schema, every endpoint,
   business logic, frontend structure, local API testing commands
+- [`docs/CLOUDFLARE.md`](./docs/CLOUDFLARE.md) — Cloudflare ↔ Uberspace TLS/ACME, and how to
+  diagnose slow page loads before suspecting app code (WIP)
 - [`CSV_EXPORT.md`](./CSV_EXPORT.md) — CSV export columns, auth, error payloads
 - [`README.md`](./README.md) — what the app does, getting started, repo layout
 - [`ToDo.md`](./ToDo.md) — known issues
