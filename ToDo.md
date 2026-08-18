@@ -31,3 +31,55 @@ matches the frontend.
   pool of the **nearer** event.
 - Confirm the reserved number appears in the frontend's number list (it currently would not).
 - Check for any other `events` query that assumes a different ordering.
+
+## Make `*Url` text resolution consistent
+
+**Status:** open — two independent defects in how `introTextUrl` / `conditionsTextUrl` /
+`additionalEmailTextUrl` are resolved. Background: ["URL text
+fields"](./docs/ARCHITECTURE.md#url-text-fields).
+
+### 1. The plain-text mail part has no editor-field fallback
+
+`pb_hooks/email.js` resolves each field twice, and the two paths disagree:
+
+| Part | Code | Behaviour |
+|---|---|---|
+| HTML | `email.js:221`, `email.js:232` — `resolveUrl(url) \|\| text` | URL wins, editor field is the fallback |
+| Plain text | `email.js:298`, `email.js:305` — `if (url) { … }` | editor field is never consulted |
+
+Inside the plain-text branch, `const conditionsText = resolveUrl(conditionsTextUrl)` shadows the
+`conditionsText` parameter, so the editor value is not merely unused — it is unreachable.
+
+**Impact:** a variation configured with only `conditionsText` / `additionalEmailText` (no URL)
+sends the conditions in the HTML part but omits them from the `text/plain` alternative. Any client
+that renders the plain-text alternative shows a confirmation mail without the terms the seller
+just accepted.
+
+**Proposed fix:** compute `finalConditionsText` / `finalAdditionalEmailText` once above the HTML
+block and use those same values in both bodies. That also removes the duplicate `resolveUrl`
+calls (currently harmless only because `cache.js` absorbs the second one).
+
+### 2. The two resolvers disagree on non-JSON responses
+
+| Resolver | Path | Accepts |
+|---|---|---|
+| Frontend | `withUrlResolving.ts` → `GET /api/seller-number/cors-proxy` | JSON only — `cors-proxy.pb.js:20` returns `res.json` |
+| Mail | `email.js:58` | `response.json \|\| response.raw`, so text/HTML works |
+
+**Impact:** a `conditionsTextUrl` pointing at a plain HTML page silently resolves to nothing in
+the browser (the editor field's value is kept) while the mail shows the fetched content. The
+website and the confirmation mail then state different terms, with no error anywhere — the
+frontend cannot distinguish "not JSON" from "empty".
+
+**Proposed fix:** decide on one contract. Either have `cors-proxy.pb.js` fall back to
+`res.raw` like `email.js` does, or keep JSON-only and make the proxy answer with a 4xx/5xx so
+`withUrlResolving`'s error path fires and the failure is visible in Sentry. The two resolvers
+duplicate `stringify` / `get` / hash-splitting logic in general; consolidating the contract is
+the point, not sharing the code across the goja/browser boundary.
+
+### Verification
+- Variation with `conditionsText` filled and `conditionsTextUrl` empty → register and confirm the
+  conditions appear in **both** the HTML and the plain-text part of the seller mail.
+- Variation with `conditionsTextUrl` pointing at a non-JSON URL → confirm site and mail agree, or
+  that the failure is reported rather than silently swallowed.
+- Both with a fresh PocketBase start, since `cache.js` holds results for 10 minutes.

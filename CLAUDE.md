@@ -147,3 +147,6 @@ query/mutation functions in `withErrorLogging`.
    `eventCategories.domain` matching the current host; `EventCategoryIdProvider` renders `null`
 8. **Reservation picks an unexpected event** → `reservation.pb.js` sorts `-eventDate` (furthest
    future) while `useUpcomingEventQuery` sorts ascending (nearest). See `docs/ARCHITECTURE.md`
+9. **A `*Url` field shows up in the mail but not on the site** → the cors-proxy returns `res.json`
+   only, so a non-JSON response resolves to nothing client-side while `email.js` still accepts
+   `response.raw`. See "URL text fields" in `docs/ARCHITECTURE.md`
