@@ -23,7 +23,7 @@ Schema below reflects the current state after all migrations in `pb_migrations/`
 |---|---|---|
 | `eventCategoryName` | text | required |
 | `introText` | editor | rich text shown on the landing page |
-| `introTextUrl` | url | optional; resolved into `introText` client-side |
+| `introTextUrl` | url | optional; resolved into `introText` client-side (see [URL text fields](#url-text-fields)) |
 | `sessionTimeInSec` | number | reservation session timeout |
 | `supportEmail` | email | recipient of registration notifications |
 | `domain` | text | maps a host to a category (see `EventCategoryIdContext`) |
@@ -39,6 +39,9 @@ Schema below reflects the current state after all migrations in `pb_migrations/`
 `sellerNumberVariationName` (text, required), `eventCategory` (relation, required),
 `conditionsText` (editor), `conditionsTextUrl` (url), `additionalEmailText` (editor),
 `additionalEmailTextUrl` (url)
+
+The two `*Url` fields hold an address whose content replaces the matching editor field — see
+[URL text fields](#url-text-fields).
 
 ### 4. sellerNumberPools (`pbc_1981446857`)
 
@@ -200,7 +203,8 @@ client/server clock offset at startup so session countdowns don't drift.
 
 - **Query params**: `url`
 - Server-side GET of `url`, response JSON cached 10 minutes via `cache.js`. Used by
-  `withUrlResolving` to pull remote `introText` / `conditionsText` content.
+  `withUrlResolving` to pull remote `introText` / `conditionsText` content — see
+  [URL text fields](#url-text-fields).
 - **Auth**: none — this is an open proxy to any URL, with the caller's headers forwarded.
   Keep that in mind before extending it.
 
@@ -229,11 +233,81 @@ client/server clock offset at startup so session countdowns don't drift.
 - Expired reservations become obtainable again (server and client both apply this rule)
 - Client uses `getSyncedNow()` (server-offset clock) for all expiry math
 
+### URL text fields
+
+Three fields hold an address rather than content: `eventCategories.introTextUrl`,
+`sellerNumberVariations.conditionsTextUrl` and `sellerNumberVariations.additionalEmailTextUrl`.
+Each is fetched at runtime and fills the editor field of the same name minus the `Url` suffix.
+Leave one empty and the editor field is used as it stands.
+
+| URL field | Fills | Consumed by |
+|---|---|---|
+| `introTextUrl` | `introText` | landing page (`useEventCategoryQuery`) |
+| `conditionsTextUrl` | `conditionsText` | conditions page (`useSellerNumberVariationsQuery`) **and** the seller confirmation mail |
+| `additionalEmailTextUrl` | `additionalEmailText` | seller confirmation mail only |
+
+**What goes in the field** — an absolute http(s) URL, optionally with a hash fragment naming a
+dot path into the JSON response:
+
+```
+https://cms.example.org/wp-json/wp/v2/pages/42#content.rendered   → nested pick
+https://example.org/api/texts.json#terms.html                     → nested pick
+https://example.org/api/text.json                                 → whole response
+```
+
+Without a hash the whole response body is used. The picked value is expected to be a **string of
+HTML**: it is injected unescaped — client-side through `ProseText`'s `dangerouslySetInnerHTML`,
+server-side straight into the mail body. A non-string value is `JSON.stringify`d, so a hash path
+pointing at an object puts raw JSON in front of the seller.
+
+**The response should be JSON.** There are two independent resolvers and they disagree on
+non-JSON responses:
+
+| | Frontend (`withUrlResolving.ts`) | Mail (`email.js`) |
+|---|---|---|
+| Transport | `GET /api/seller-number/cors-proxy` | `$http.send` directly, 10 s timeout |
+| Body | `res.json` only — non-JSON yields nothing | `response.json \|\| response.raw`, so text/HTML works too |
+| Hash pick | `lodash.get` | hand-rolled `get()`, same dot notation |
+| On failure | keeps the editor field's value | falls back to the editor field (HTML part only) |
+
+A URL serving plain HTML therefore reaches the mail but silently leaves the website on the editor
+text. Serve JSON for `conditionsTextUrl` in particular, since both resolvers read it.
+
+**Precedence differs per consumer** — worth knowing before filling in URL *and* editor field:
+
+- Frontend: the URL wins, but only on success; an empty or failed fetch leaves the editor text
+- Mail, HTML part: `resolveUrl(url) || text` — URL wins, editor field is the fallback
+  (`email.js:221`, `email.js:232`)
+- Mail, plain-text part: only the URL is consulted (`email.js:298`, `email.js:305`), so with just
+  the editor field filled the section is missing from the `text/plain` alternative
+
+> **Known inconsistencies**, both tracked in [`../ToDo.md`](../ToDo.md):
+>
+> 1. The plain-text mail part has no editor-field fallback. `const conditionsText =
+>    resolveUrl(conditionsTextUrl)` inside the branch shadows the parameter of the same name, so a
+>    variation with only `conditionsText` set sends its conditions in the HTML part and omits them
+>    from `text/plain`.
+> 2. The frontend accepts JSON only while the mail also accepts `response.raw`. A non-JSON URL
+>    makes site and mail show different text, with no error raised on either side.
+
+**Caching**: 10 minutes via `cache.js`, held separately by the proxy and by `email.js` (keyed
+`resolveUrl:<url>`), so remote edits appear with a delay; a PocketBase restart clears both.
+`email.js` caches failures as an empty string for the same 10 minutes and sends the mail without
+the section rather than failing.
+
+Check a URL without going through the UI — valid JSON containing your hash path means the field
+will work in both consumers:
+
+```bash
+curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org/wp-json/wp/v2/pages/42"
+```
+
 ### Registration emails (`pb_hooks/email.js`)
 
 - **Support notification** → `eventCategories.supportEmail` (skipped with a warning when unset)
 - **Seller confirmation** → the seller, including `conditionsText` and `additionalEmailText`
-  (each optionally fetched from its `*Url` counterpart via `$http.send`, cached)
+  (each optionally fetched from its `*Url` counterpart via `$http.send`, cached — see
+  [URL text fields](#url-text-fields) for precedence and the plain-text gap)
 - Both use `$app.newMailClient().send()` with `$app.settings().meta.senderAddress` /
   `senderName`; failures are logged, not thrown — registration still succeeds if mail fails
 - All copy is German
@@ -263,7 +337,8 @@ it is re-enabled on realtime disconnect. `pb.autoCancellation(false)` is set.
 
 - `withUrlResolving(data, { resolverMap: { introTextUrl: 'introText' } })` — fetches URL fields
   through the cors-proxy and writes the result into the target field; supports a
-  `#path.to.prop` hash to pick a nested JSON property
+  `#path.to.prop` hash to pick a nested JSON property. See
+  [URL text fields](#url-text-fields).
 - `gracefulArray(schema)` — parses an array, dropping entries that fail validation
 - `useDeviceUuid()` — persistent per-device UUID in localStorage, sent with registration and
   registered with Sentry
