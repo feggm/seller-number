@@ -68,10 +68,13 @@ function Index() {
         <CardFooter className="flex flex-wrap gap-4 pt-2">
           {isVariationButtonsLoading && <Skeleton className="h-20 w-full" />}
           {!isVariationButtonsLoading && hasNoUpcomingEvent && (
-            <p className="text-slate-700 leading-relaxed">
-              Zurzeit ist kein Termin geplant, für den Verkäufernummern vergeben
-              werden. Schau bitte später noch einmal vorbei.
-            </p>
+            <div className="w-full space-y-4 text-slate-700 leading-relaxed">
+              <p>
+                Zurzeit ist kein Termin geplant, für den Verkäufernummern
+                vergeben werden.
+              </p>
+              <p>Schau bitte später noch einmal vorbei.</p>
+            </div>
           )}
           {!isVariationButtonsLoading &&
             !hasNoUpcomingEvent &&
