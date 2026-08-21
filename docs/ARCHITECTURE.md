@@ -558,6 +558,10 @@ single-series plots with a known y-max do not justify ~100 kB gzip.
     time of day, not as six minutes in.
   - The outermost x-labels are anchored `start`/`end`, not `middle`: they sit exactly on the
     plot edges, and centring them clips half the text against the viewBox.
+  - The hover tooltip is **absolutely positioned over** the facets, following the crosshair,
+    and never part of the layout flow. It first lived in the control row, where showing it grew
+    that row and pushed the whole page down on every mouse-over. Its horizontal position is
+    clamped so it stays inside the card at either edge.
   - Known characteristic, not a bug: spinning the wheel very fast zooms less per notch than
     spinning it slowly, because React batches the state updates. Bounds and direction stay
     correct throughout.
