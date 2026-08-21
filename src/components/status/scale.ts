@@ -108,6 +108,33 @@ const timeWithSecondsFormatter = new Intl.DateTimeFormat('de-DE', {
   timeZone: 'Europe/Berlin',
 })
 
+const dayTimeFormatter = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Berlin',
+})
+
+// Full HH:MM:SS, not mm:ss — a bare "06:15" on a zoomed-in axis is indistinguishable from
+// an hour-and-minute label, and reads as six in the morning. (Confirmed the hard way.)
+const secondsFormatter = new Intl.DateTimeFormat('de-DE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  timeZone: 'Europe/Berlin',
+})
+
 export const formatClock = (t: number) => timeFormatter.format(new Date(t))
+
+/**
+ * Axis label matched to the visible span: seconds when zoomed right in, a date once the
+ * window spans more than half a day and bare HH:MM would be ambiguous across midnight.
+ */
+export const formatAxisTime = (t: number, spanMs: number) => {
+  if (spanMs <= 10 * 60 * 1000) return secondsFormatter.format(new Date(t))
+  if (spanMs >= 12 * 60 * 60 * 1000) return dayTimeFormatter.format(new Date(t))
+  return timeFormatter.format(new Date(t))
+}
 export const formatClockWithSeconds = (t: number) =>
   timeWithSecondsFormatter.format(new Date(t))

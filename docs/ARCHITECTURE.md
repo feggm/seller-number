@@ -539,6 +539,28 @@ single-series plots with a known y-max do not justify ~100 kB gzip.
   to `0…total` and a reference hairline at the ceiling; connections as a **step** line, because
   the samples are 5s buckets and a smoothed curve would imply resolution that does not exist.
   Two facets sharing an x-axis, **never** one plot with two y-scales.
+- **Pan & zoom.** Wheel zooms around the cursor, drag pans, two fingers pinch. It is pure
+  arithmetic on the visible domain, which the *route* owns so both facets move together and
+  stay inside `bounds` — the window actually loaded. A preset row above the charts (15 min /
+  1 h / 6 h / 24 h) switches that window; while it refetches the charts hold their previous
+  render at reduced opacity (`keepPreviousData`) rather than dropping to a skeleton.
+  Any pan or zoom **freezes** the view and reveals a "↻ Live" button, because the 2s poll would
+  otherwise yank the viewport away every two seconds.
+  - The wheel listener is attached natively with `{ passive: false }`. React registers
+    `onWheel` passively, where `preventDefault()` is ignored, so the page would scroll while
+    the chart zoomed.
+  - The connections facet rescales its y-axis to the **visible** range — it has no natural
+    ceiling, and an off-screen spike would flatten whatever you zoomed in to see. Registrations
+    do the opposite and stay pinned to `0…total`; that ceiling is the point of the reference line.
+  - Axis labels follow the span: `HH:MM:SS` under 10 minutes, `HH:MM` up to 12 hours, and
+    `DD.MM., HH:MM` beyond, where bare clock times would be ambiguous across midnight. The
+    seconds format deliberately keeps the hour — a bare `06:15` on a zoomed axis reads as a
+    time of day, not as six minutes in.
+  - The outermost x-labels are anchored `start`/`end`, not `middle`: they sit exactly on the
+    plot edges, and centring them clips half the text against the viewBox.
+  - Known characteristic, not a bug: spinning the wheel very fast zooms less per notch than
+    spinning it slowly, because React batches the state updates. Bounds and direction stay
+    correct throughout.
 - The x-axis domain ends at `max(snapshot time, newest sample)`. The snapshot and the history
   are separate queries on different intervals, so the history routinely carries samples a few
   seconds newer than the snapshot; anchoring on the snapshot alone draws them past the plot edge.
