@@ -2,6 +2,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { RemainingMeter } from '@/components/status/RemainingMeter'
 import { StatTile } from '@/components/status/StatTile'
 import { TimeSeriesFacet } from '@/components/status/TimeSeriesFacet'
+import type { Viewport } from '@/components/status/TimeSeriesFacet'
 import {
   type Point,
   formatClockWithSeconds,
@@ -21,16 +22,29 @@ export const Route = createFileRoute('/live')({
 
 const REGISTRATION_COLOR = '#2a78d6'
 const CONNECTION_COLOR = '#eb6834'
-const WINDOW_MINUTES = 60
 const LIVE_TAIL_MAX = 900
+
+/** Loaded-window presets. The charts pan and zoom freely *inside* the chosen window; the
+ *  window itself is what decides how much is fetched, and at which bucket width. */
+const RANGES = [
+  { minutes: 15, label: '15 Min' },
+  { minutes: 60, label: '1 Std' },
+  { minutes: 360, label: '6 Std' },
+  { minutes: 1440, label: '24 Std' },
+] as const
 
 const numberFormatter = new Intl.NumberFormat('de-DE')
 
 function Live() {
+  const [windowMinutes, setWindowMinutes] = useState<number>(60)
   const { data: status, isLoading: isStatusLoading } = usePublicStatusQuery()
-  const { data: history } = usePublicStatusHistoryQuery(WINDOW_MINUTES)
+  const { data: history, isFetching: isHistoryFetching } =
+    usePublicStatusHistoryQuery(windowMinutes)
 
   const [hoverT, setHoverT] = useState<number | undefined>(undefined)
+  // null = follow live. Any pan or zoom freezes the view, because otherwise the 2s poll would
+  // yank the viewport out from under the reader every two seconds.
+  const [viewport, setViewport] = useState<Viewport | null>(null)
 
   // Client-side live tail: the persisted samples are 5s buckets, but the page polls every 2s,
   // so the most recent stretch can be drawn at the poll cadence. Kept in a ref so appending a
@@ -72,8 +86,10 @@ function Live() {
     ...liveTailRef.current.map((point) => point.t)
   )
   const now = Math.max(new Date(status.generatedAt.utc).getTime(), newestSample)
-  const from = now - WINDOW_MINUTES * 60 * 1000
-  const domain: [number, number] = [from, now]
+  const from = now - windowMinutes * 60 * 1000
+  // `bounds` is what was actually loaded; `domain` is what is on screen.
+  const bounds: [number, number] = [from, now]
+  const domain: [number, number] = viewport ? [viewport.from, viewport.to] : bounds
 
   // ---- registrations: cumulative, against the known ceiling ----
   //
@@ -102,12 +118,30 @@ function Live() {
     ...tail,
   ].filter((point) => point.t >= from)
 
-  const connectionMax = Math.max(1, ...connectionPoints.map((point) => point.v))
+  // The connections facet rescales to what is actually visible — it has no natural ceiling,
+  // and a spike an hour off-screen would otherwise flatten the detail you zoomed in to see.
+  // The registrations facet does the opposite and stays pinned to 0…total, because that
+  // ceiling is the point of the reference line.
+  const visibleConnections = connectionPoints.filter(
+    (point) => point.t >= domain[0] && point.t <= domain[1]
+  )
+  const connectionMax = Math.max(
+    1,
+    ...(visibleConnections.length > 0 ? visibleConnections : connectionPoints).map(
+      (point) => point.v
+    )
+  )
 
   const hoveredRegistration =
     hoverT !== undefined ? nearestPoint(registrationPoints, hoverT) : undefined
   const hoveredConnection =
     hoverT !== undefined ? nearestPoint(connectionPoints, hoverT) : undefined
+
+  // Resolve the updater against the current viewport, falling back to the loaded window when
+  // the chart is still following live.
+  const applyViewport = (update: (current: Viewport) => Viewport) => {
+    setViewport((previous) => update(previous ?? { from: bounds[0], to: bounds[1] }))
+  }
 
   const { numbers, release } = status
   const taken = numbers.registered + numbers.reserved
@@ -244,10 +278,40 @@ function Live() {
             </div>
 
             <div className="flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-4">
-                <span className="text-xs text-slate-400">
-                  Letzte {WINDOW_MINUTES} Minuten
-                </span>
+              {/* One control row above the charts, scoping both facets. */}
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1">
+                  {RANGES.map((range) => (
+                    <button
+                      key={range.minutes}
+                      type="button"
+                      onClick={() => {
+                        setWindowMinutes(range.minutes)
+                        setViewport(null)
+                      }}
+                      aria-pressed={windowMinutes === range.minutes}
+                      className={
+                        'rounded-md px-2 py-1 text-xs font-medium transition-colors ' +
+                        (windowMinutes === range.minutes
+                          ? 'bg-slate-800 text-white'
+                          : 'text-slate-500 hover:bg-slate-100')
+                      }
+                    >
+                      {range.label}
+                    </button>
+                  ))}
+                  {viewport && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewport(null)
+                      }}
+                      className="ml-1 rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                    >
+                      ↻ Live
+                    </button>
+                  )}
+                </div>
                 {hoverT !== undefined && (
                   <div className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs tabular-nums shadow-sm">
                     <div className="text-slate-500">{formatClockWithSeconds(hoverT)}</div>
@@ -270,6 +334,9 @@ function Live() {
                 subtitle="exakt, aus den Registrierungszeitpunkten"
                 points={registrationPoints}
                 domain={domain}
+                bounds={bounds}
+                dimmed={isHistoryFetching}
+                onViewportChange={applyViewport}
                 yMax={numbers.total}
                 color={REGISTRATION_COLOR}
                 mode="area"
@@ -284,6 +351,9 @@ function Live() {
                 subtitle={`${(history?.bucketSeconds ?? 5).toString()}-Sekunden-Stichproben`}
                 points={connectionPoints}
                 domain={domain}
+                bounds={bounds}
+                dimmed={isHistoryFetching}
+                onViewportChange={applyViewport}
                 yMax={connectionMax}
                 color={CONNECTION_COLOR}
                 mode="step"

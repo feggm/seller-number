@@ -1,6 +1,6 @@
 import { useEventCategoryId } from '@/context/EventCategoryIdContext'
 import { queryClient } from '@/lib/queryClient'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { pb } from './pocketbase'
@@ -161,6 +161,9 @@ export const usePublicStatusHistoryQuery = (windowMinutes = 60) => {
     staleTime: Infinity,
     refetchInterval: 10000,
     refetchIntervalInBackground: false,
+    // Switching the time range must not blank the charts: hold the previous render (dimmed
+    // by the caller) instead of dropping to a skeleton and jumping the layout.
+    placeholderData: keepPreviousData,
     meta: { suppressErrorToast: true },
   })
 }
