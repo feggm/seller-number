@@ -34,8 +34,12 @@ const getErrorMessage = (error: unknown): string => {
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
       console.error('Query error:', error)
+      // Fast-polling queries opt out: a 2s interval would otherwise fire a toast every
+      // 2 seconds, which reads as broken rather than informative. Sentry still gets it
+      // via withErrorLogging.
+      if (query.meta?.suppressErrorToast) return
       const errorMessage = getErrorMessage(error)
       toast.error('Da ist was schiefgelaufen', {
         description: errorMessage,
