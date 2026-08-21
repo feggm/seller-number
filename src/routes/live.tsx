@@ -137,6 +137,18 @@ function Live() {
   const hoveredConnection =
     hoverT !== undefined ? nearestPoint(connectionPoints, hoverT) : undefined
 
+  // Where the tooltip sits, as a percentage of the chart's width. The facets use a
+  // viewBox 0…800 with the plot area between x=44 and x=784, and the svg is full-width, so
+  // the mapping is linear. Clamped so the box never runs off either edge.
+  const hoverRatio =
+    hoverT === undefined
+      ? 0
+      : (hoverT - domain[0]) / Math.max(domain[1] - domain[0], 1)
+  const tooltipLeftPercent = Math.min(
+    Math.max(((44 + hoverRatio * 740) / 800) * 100, 12),
+    88
+  )
+
   // Resolve the updater against the current viewport, falling back to the loaded window when
   // the chart is still following live.
   const applyViewport = (update: (current: Viewport) => Viewport) => {
@@ -312,8 +324,18 @@ function Live() {
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* The facets sit in a positioned wrapper so the tooltip can float above them.
+                  It used to live in the control row above, where showing it grew the row and
+                  pushed the whole page down on every hover. A tooltip must never be in the
+                  layout flow. */}
+              <div className="relative flex flex-col gap-4">
                 {hoverT !== undefined && (
-                  <div className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs tabular-nums shadow-sm">
+                  <div
+                    className="pointer-events-none absolute top-5 z-10 -translate-x-1/2 whitespace-nowrap rounded-md border border-slate-200 bg-white/95 px-2 py-1 text-xs tabular-nums shadow-sm"
+                    style={{ left: `${tooltipLeftPercent.toString()}%` }}
+                  >
                     <div className="text-slate-500">{formatClockWithSeconds(hoverT)}</div>
                     {hoveredRegistration && (
                       <div className="text-slate-700">
@@ -327,7 +349,6 @@ function Live() {
                     )}
                   </div>
                 )}
-              </div>
 
               <TimeSeriesFacet
                 title="Vergebene Nummern"
@@ -362,6 +383,7 @@ function Live() {
                 hoverT={hoverT}
                 onHoverT={setHoverT}
               />
+              </div>
             </div>
 
             {status.variations.length > 0 && (
