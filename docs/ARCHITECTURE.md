@@ -524,6 +524,15 @@ rush over the Cloudflare→Uberspace path documented in [`CLOUDFLARE.md`](./CLOU
 single-series plots with a known y-max do not justify ~100 kB gzip.
 
 - `StatTile` — the four headline figures. Not charts; a one-bar chart for a scalar is noise.
+  "Noch frei" is the only tile carrying **state**, so it is the only place status colours are
+  used — they are reserved for good/warning/serious/critical and never double as a series hue.
+  Three states, and the middle one matters: `availableNow > 0` → good; `availableNow === 0` with
+  an upcoming release → *pending*, not critical, because painting a waiting state red would be
+  wrong; `availableNow === 0` with nothing coming → critical. Each ships an icon **and** a word
+  ("verfügbar" / "noch nicht freigeschaltet" / "vergriffen"), so the tile survives greyscale,
+  `forced-colors` and colour-blind readers. Two inks per status: the 3:1 step for the large
+  value, a darker 4.5:1 step for the caption — verified against the tinted tile backgrounds,
+  not against white.
 - `RemainingMeter` — "noch X von Y frei" as a meter against a known limit. Blue ramp, *not*
   status green/amber/red: those mean good/warning/critical, never "how full is this".
 - `TimeSeriesFacet` — one single-series plot. Registrations as an area with the y-domain fixed

@@ -160,9 +160,26 @@ function Live() {
                 value={numbers.reserved}
                 hint="Nummer reserviert, Formular offen"
               />
+              {/* The one tile that carries state, so the one place status colours belong.
+                  Zero is only "vergriffen" when nothing is coming — zero with a release
+                  still ahead is a waiting state, and painting it red would be a lie. */}
               <StatTile
                 label="Noch frei"
                 value={numbers.availableNow}
+                status={
+                  numbers.availableNow > 0
+                    ? 'good'
+                    : numbers.availableLater > 0
+                      ? 'pending'
+                      : 'critical'
+                }
+                statusLabel={
+                  numbers.availableNow > 0
+                    ? 'verfügbar'
+                    : numbers.availableLater > 0
+                      ? 'noch nicht freigeschaltet'
+                      : 'vergriffen'
+                }
                 hint={
                   numbers.availableLater > 0
                     ? `${numberFormatter.format(numbers.availableLater)} weitere noch gesperrt`
