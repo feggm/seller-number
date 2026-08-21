@@ -234,7 +234,30 @@ Deliberately **not** cached — `cache.js` has a 10 minute TTL and stale counts 
 Live snapshot for one event category, backing the status page at `/#/live`. Returns the same
 `{ total, registered, reserved, available, expiredHolds }` counts as the admin report, rolled up
 per variation and for the event as a whole, plus `release` (`isObtainableNow`, `obtainableFrom`,
-`obtainableTo`, `nextOpensAt`) and `connections`.
+`obtainableTo`, `nextOpensAt`), `upcomingReleases` and `connections`.
+
+**`available` is not what a seller can get.** `classifyPool` counts every pool of the event,
+including ones whose `obtainableFrom` is still in the future, so locked stock lands in
+`available`. Two extra fields split it:
+
+| Field | Meaning |
+|---|---|
+| `availableNow` | available **and** the pool is open right now — what could actually be obtained |
+| `availableLater` | available in a pool that has not opened yet |
+
+`available - availableNow - availableLater` is stock in pools whose window has already closed;
+it is dead and gets no field. **Anything in the UI that says "frei" must use `availableNow`** —
+the meter and the per-variation lines compute their denominator as `total - availableLater`.
+
+`upcomingReleases` lists the future release waves, **grouped by `obtainableFrom`** so pools that
+open at the same moment read as one block. There can be none, one, or several:
+
+```jsonc
+"upcomingReleases": [
+  { "opensAt": <BerlinTS>, "total": 30, "available": 30, "variations": ["Damen", "Kinder"] },
+  { "opensAt": <BerlinTS>, "total": 5,  "available": 5,  "variations": ["Kinder"] }
+]
+```
 
 Pools are rolled up into their variation and the pool layer is dropped — the public question is
 "Damen: noch 120 von 400 frei", and pool ids and their individual windows are config detail.

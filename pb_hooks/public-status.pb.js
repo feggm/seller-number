@@ -119,8 +119,9 @@ routerAdd('GET', '/api/seller-number/public-status', (e) => {
         event: null,
         eventSelection: 'nearestUpcoming',
         reservationTargetMatches: true,
-        numbers: emptyCounts(),
+        numbers: { ...emptyCounts(), availableNow: 0, availableLater: 0 },
         variations: [],
+        upcomingReleases: [],
         release: {
           isObtainableNow: false,
           obtainableFrom: null,
@@ -145,6 +146,39 @@ routerAdd('GET', '/api/seller-number/public-status', (e) => {
     const eventNumbers = emptyCounts()
     const throwawayWarnings = []
 
+    // `classifyPool` counts every pool of the event, open or not — so a pool whose
+    // obtainableFrom is still in the future contributes to `available` even though nobody can
+    // obtain those numbers yet. Split that out rather than reporting locked stock as free:
+    //   availableNow   — available AND the pool is open right now
+    //   availableLater — available in a pool that has not opened yet
+    // (The remainder, `available - availableNow - availableLater`, sits in pools whose window
+    // has already closed; it is dead stock and gets no field of its own.)
+    const splitAvailability = (counts, pool) => {
+      if (!counts) return
+      const from = pool.get('obtainableFrom')
+      const opensInFuture = from && from !== '' && parseDbDate(from) > now
+
+      if (isObtainableNow(pool, now)) counts.availableNow = counts.available
+      else if (opensInFuture) counts.availableLater = counts.available
+    }
+
+    const withAvailability = (counts) => ({
+      ...counts,
+      availableNow: counts.availableNow || 0,
+      availableLater: counts.availableLater || 0,
+    })
+
+    const addAvailability = (target, source) => {
+      if (!source) return target
+      target.availableNow = (target.availableNow || 0) + (source.availableNow || 0)
+      target.availableLater = (target.availableLater || 0) + (source.availableLater || 0)
+      return target
+    }
+
+    // Future release blocks, grouped by the moment they open — there can be none, one, or
+    // several. Keyed by timestamp so pools that open together read as one block.
+    const releaseBlocks = {}
+
     // Pools are rolled up into their variation and the pool layer is dropped entirely: the
     // public question is "Damen: noch 120 von 400 frei", and pool ids plus their individual
     // windows are configuration detail.
@@ -152,29 +186,55 @@ routerAdd('GET', '/api/seller-number/public-status', (e) => {
       const variation = variationsById[variationId]
       const variationPools = poolsByVariationId[variationId]
       const variationNumbers = emptyCounts()
+      const variationName = variation ? variation.get('sellerNumberVariationName') : null
 
       for (const pool of variationPools) {
-        addCounts(
-          variationNumbers,
-          classifyPool(
-            pool,
-            sessionTimeInSec,
-            sellerNumbersByPoolAndNumber,
-            now,
-            throwawayWarnings
-          )
+        const poolCounts = classifyPool(
+          pool,
+          sessionTimeInSec,
+          sellerNumbersByPoolAndNumber,
+          now,
+          throwawayWarnings
         )
+        if (!poolCounts) continue
+
+        splitAvailability(poolCounts, pool)
+        addCounts(variationNumbers, poolCounts)
+        addAvailability(variationNumbers, poolCounts)
+
+        const from = pool.get('obtainableFrom')
+        if (from && from !== '' && parseDbDate(from) > now) {
+          const key = parseDbDate(from).toISOString()
+          if (!releaseBlocks[key]) {
+            releaseBlocks[key] = {
+              opensAt: formatBerlin(parseDbDate(from)),
+              total: 0,
+              available: 0,
+              variations: [],
+            }
+          }
+          releaseBlocks[key].total += poolCounts.total
+          releaseBlocks[key].available += poolCounts.available
+          if (variationName && releaseBlocks[key].variations.indexOf(variationName) === -1) {
+            releaseBlocks[key].variations.push(variationName)
+          }
+        }
       }
 
       addCounts(eventNumbers, variationNumbers)
+      addAvailability(eventNumbers, variationNumbers)
 
       return {
         id: variationId,
-        name: variation ? variation.get('sellerNumberVariationName') : null,
-        numbers: variationNumbers,
+        name: variationName,
+        numbers: withAvailability(variationNumbers),
         release: collectRelease(variationPools),
       }
     })
+
+    const upcomingReleases = Object.keys(releaseBlocks)
+      .sort()
+      .map((key) => releaseBlocks[key])
 
     return e.json(200, {
       generatedAt: formatBerlin(now),
@@ -187,9 +247,10 @@ routerAdd('GET', '/api/seller-number/public-status', (e) => {
       },
       eventSelection: 'nearestUpcoming',
       reservationTargetMatches: reservationTarget ? reservationTarget.get('id') === eventId : true,
-      numbers: eventNumbers,
+      numbers: withAvailability(eventNumbers),
       variations,
       release: collectRelease(eventPools),
+      upcomingReleases,
       connections,
     })
   } catch (error) {
