@@ -63,6 +63,20 @@ The two `*Url` fields hold an address whose content replaces the matching editor
 `sellerFirstName` (text, required), `sellerLastName` (text, required),
 `sellerEmail` (email, required), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text)
 
+### 7. statusSamples
+
+`eventCategory` (relation → eventCategories, required, cascade delete), `bucketAt` (date,
+required — bucket start, UTC), `connections` (number), `source` (text: `live` | `heartbeat`)
+
+Append-only time series behind the public status page's connection curve. All API rules are
+`null` (superuser only); the history is served through the endpoint. A unique index on
+`(eventCategory, bucketAt)` is the dedupe mechanism, not an optimisation — see
+[Status sampling](#status-sampling).
+
+Only the connection count is stored. The number counts are exactly reconstructable from
+`sellerDetails.created` + `sellerNumbers`, so persisting them would be a second, drift-prone
+copy; the connection count exists only in Go process memory and is otherwise unrecoverable.
+
 ## Backend hooks
 
 Route-registering files must end with `.pb.js`; plain `.js` files are shared modules loaded
@@ -74,12 +88,29 @@ via ``require(`${__hooks}/name.js`)``.
 | `registration.pb.js` | POST `/api/seller-number/registration` |
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` |
 | `status.pb.js` | GET `/api/seller-number/status` |
+| `public-status.pb.js` | GET `/api/seller-number/public-status` and `…/public-status/history` |
+| `status-sampler.pb.js` | route-free: the `statusHeartbeat` and `statusSamplesRetention` crons |
 | `time.pb.js` | GET `/api/seller-number/now` |
 | `cors-proxy.pb.js` | GET `/api/seller-number/cors-proxy` |
 | `cache-headers.pb.js` | `routerUse` middleware: `Cache-Control` for the static frontend |
 | `email.js` | shared module: `sendRegistrationEmails` |
 | `cache.js` | shared in-memory cache, 10 min TTL |
 | `berlin-time.js` | shared module: `formatBerlin`, `berlinZoneInfo` — UTC → Europe/Berlin |
+| `status-core.js` | shared module: tree loading, per-pool classification, `toDbDate`, `countCategoryClients` |
+| `status-samples.js` | shared module: bucketing, append-only sample I/O, retention sweep |
+
+> **Handlers cannot see their file's module scope.** A function registered with `routerAdd` or
+> `cronAdd` executes in isolation — a `const` declared at the top of the hook file is
+> `undefined` at request time, and the request fails with PocketBase's generic 400 envelope
+> rather than anything that names the cause. Every helper therefore lives *inside* its handler,
+> and shared code is reached with `require()`, which does work there. This is why the hook files
+> look repetitive; it is not a style choice.
+
+> **Dates used as filter parameters need a space, not a `T`.** PocketBase stores dates as
+> `2026-08-20 22:54:00.000Z` and compares them as strings in SQLite, so a raw `toISOString()`
+> (with `T`, 0x54) sorts after every stored value of the same day (`" "`, 0x20) and silently
+> matches nothing. `status-core.js` exports `toDbDate()` for this. `reservation.pb.js` still has
+> the unfixed version — see [`../ToDo.md`](../ToDo.md).
 
 ### Static asset caching (`pb_hooks/cache-headers.pb.js`)
 
@@ -193,6 +224,100 @@ too: its domain cannot hand out a number at all, since reservations there fail w
 the sort mismatch tracked in [`../ToDo.md`](../ToDo.md).
 
 Deliberately **not** cached — `cache.js` has a 10 minute TTL and stale counts would mislead.
+
+### GET /api/seller-number/public-status
+
+- **Auth**: none. **Query params**: `eventCategoryId` (required; 400 without, 404 if unknown)
+- **Cache**: `Cache-Control: no-store` — the figures are live *and* the route has a write
+  side-effect (sampling). `cache-headers.pb.js` leaves `/api/*` alone, so nothing else sets it.
+
+Live snapshot for one event category, backing the status page at `/#/live`. Returns the same
+`{ total, registered, reserved, available, expiredHolds }` counts as the admin report, rolled up
+per variation and for the event as a whole, plus `release` (`isObtainableNow`, `obtainableFrom`,
+`obtainableTo`, `nextOpensAt`) and `connections`.
+
+Pools are rolled up into their variation and the pool layer is dropped — the public question is
+"Damen: noch 120 von 400 frei", and pool ids and their individual windows are config detail.
+`release.nextOpensAt` is the earliest `obtainableFrom` still in the future, i.e. the "when do
+numbers open" answer in one field.
+
+**Withheld**: `supportEmail`, `sessionTimeInSec`, `domain`, `numbersSpec`, `warnings[]`, app
+settings, pool ids, and anything from `sellerDetails` beyond aggregate counts and bucketed
+`created` timestamps.
+
+> Hiding counts would be theatre, not confidentiality: `sellerNumberPools.listRule` and
+> `sellerNumbers.listRule` are both `""` (migrations `1743201198` / `1743201088`), so the full
+> number list is already public — `useObtainableNumbers.ts` computes availability in the browser
+> and depends on it. The page therefore shows "noch X von Y frei" openly.
+
+**Event selection.** Uses `sort: 'eventDate'` limit 1 — the *nearest* upcoming event, matching
+`useUpcomingEventQuery` and the decision recorded in `ToDo.md`. `eventSelection` names the choice
+in the payload and `reservationTargetMatches: false` flags when `reservation.pb.js` would pick a
+different event, so the UI can say so instead of showing figures for another event.
+
+Deliberately a separate file from `status.pb.js`: that endpoint's superuser gate is four
+unconditional lines guarding an all-categories report, and making it conditional on a query param
+would be the riskiest edit available here. Two files, two unconditional policies; the counting
+logic they share lives in `status-core.js`.
+
+### GET /api/seller-number/public-status/history
+
+- **Auth**: none. **Query params**: `eventCategoryId` (required), `windowMinutes` (default 60,
+  clamped to 1…1440). No write side-effect.
+
+`{ bucketSeconds, from, to, registrations: [{t, n}], registrationsTotal, connections: [{t, c}] }`,
+capped at 720 points per series (the bucket widens automatically for long windows).
+
+The two series have **different provenance and different resolution**, which is why the page
+draws them as two stacked facets sharing an x-axis rather than one plot with two y-scales:
+
+| Series | Source | Resolution |
+|---|---|---|
+| `registrations` | `sellerDetails.created`, derived live on every request | exact; survives reload and deploy, reconstructable retroactively |
+| `connections` | `statusSamples` | 5s while someone is watching, 60s heartbeat in the release window, nothing otherwise |
+
+`sellerDetails` has no path back to a category — the only link is `sellerNumbers.sellerDetails` —
+so the rows are loaded through their seller numbers and expanded with `$app.expandRecords`.
+
+### Status sampling
+
+The connection count lives only in Go process memory, so it must be written down as it happens.
+Cron cannot do it alone: `cronAdd` takes a standard 5-field expression, so 60s is its floor, and
+the JSVM has no `setInterval`. Two tiers instead:
+
+1. **Opportunistic** (`status-samples.js`, called from the snapshot route): each response floors
+   `now` into a 5s bucket and attempts one insert. The unique index makes dedupe atomic, so write
+   load is capped at **one row per bucket regardless of viewer count** — 5 watchers or 500 cost
+   the same ≈0.2 writes/s. This matters: without the cap, 500 visitors polling would put ~250
+   INSERT/s on the same SQLite writer `reservation.pb.js` needs inside `runInTransaction`, in the
+   exact minute reservations must not stall. A per-VM memo skips most attempts before they reach
+   SQLite; it is a cache, not a counter, so the goja VM pool is harmless here — correctness lives
+   in the index.
+2. **Heartbeat** (`status-sampler.pb.js`), every minute, but only while `now` is inside
+   `[min(obtainableFrom) − 15 min, +24 h]` for that category. Its purpose is to make a gap in the
+   curve mean "nobody was watching" rather than "we lost data".
+
+Retention: `statusSamplesRetention` sweeps rows older than 90 days nightly, batched in a
+transaction.
+
+> Hook files are evaluated once per goja VM, so `cronAdd` runs N times — PocketBase *replaces* a
+> job reusing an existing id, so exactly one survives and fires. Verified: exactly one row per
+> minute per category. Do not "fix" this with a registration guard.
+
+### Presence — what `connections` actually counts
+
+`$app.subscriptionsBroker()` is process-global across every domain the instance serves, so it is
+filtered by topic: `useCategoryPresence.ts` opens an otherwise no-op subscription to
+`eventCategories/<id>` from the root route, and the endpoint counts clients via
+`hasSubscription()`. Additive on purpose — the existing `subscribe('*', …)` handlers in
+`useEventCategoryQuery.ts` are untouched, and the by-domain one *must* stay `'*'` or it would
+miss another category claiming the domain.
+
+It counts **SSE connections, i.e. browser tabs** (`pb` is a module singleton), not people and not
+devices. Two tabs on one device count twice; the status page counts itself; a client that fell
+back to the 5s polling path is invisible; a phone that backgrounded the tab drops out; and
+Cloudflare recycling idle streams shows up as brief dips while the SDK reconnects. The UI labels
+it "Aktive Verbindungen" and says so — never "Personen".
 
 ### GET /api/seller-number/now
 
@@ -321,6 +446,10 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   `src/routeTree.gen.ts` (do not edit by hand)
 - Flow: `index` → `variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter/{conditions,seller-details}`
   → `success`; `no-reservation` for the failure case
+- `live` — the public status page at `/#/live`, not linked from anywhere. Obscurity, **not**
+  access control: every figure on it is already fetchable unauthenticated from
+  `sellerNumberPools` + `sellerNumbers`, so a secret path would buy nothing. It is code-split
+  into its own ~12 kB chunk and loads only when visited.
 
 ### Event category resolution (`src/context/EventCategoryIdContext.tsx`)
 
@@ -344,6 +473,43 @@ it is re-enabled on realtime disconnect. `pb.autoCancellation(false)` is set.
   registered with Sentry
 - `useCurrentTime()` / `getSyncedNow()` — server-offset time
 - Registration results are cached in localStorage under `sellerDetails_${sellerNumberId}`
+
+### Status page (`src/routes/live.tsx`)
+
+`usePublicStatusQuery` / `usePublicStatusHistoryQuery` in `src/clients/usePublicStatusQuery.ts`.
+
+> **Documented exception to `staleTime: Infinity` + realtime invalidation.** The snapshot also
+> carries `refetchInterval: 2000` (history: 10000), because `connections` is Go process state,
+> not a projection of any record — there is no record event realtime could invalidate on. The
+> `sellerNumbers` subscription still covers the counts, so those update faster than the poll.
+> `refetchIntervalInBackground: false` stops a forgotten tab from polling and from inflating its
+> own connection figure.
+>
+> Both queries pass `meta: { suppressErrorToast: true }`; `queryClient.ts` honours it. A 2s poll
+> against a failing endpoint would otherwise fire the global toast every two seconds, which
+> reads as broken rather than informative. Sentry still receives the error via
+> `withErrorLogging`.
+
+The page **cannot** opt out of the blocking `await initializeTimeSync()` in `main.tsx` — that
+sits above `createRoot`, above the router. It avoids *depending* on it instead: the x-axis is
+anchored on server-supplied timestamps and every displayed time comes from the server's
+Berlin-formatted `display` string, so the page is correct even if time sync failed entirely.
+
+Charts are hand-rolled inline SVG (`src/components/status/`), no charting dependency: the entry
+chunk is already past the 500 kB warning, and this page's job is to be up instantly during a
+rush over the Cloudflare→Uberspace path documented in [`CLOUDFLARE.md`](./CLOUDFLARE.md). Two
+single-series plots with a known y-max do not justify ~100 kB gzip.
+
+- `StatTile` — the four headline figures. Not charts; a one-bar chart for a scalar is noise.
+- `RemainingMeter` — "noch X von Y frei" as a meter against a known limit. Blue ramp, *not*
+  status green/amber/red: those mean good/warning/critical, never "how full is this".
+- `TimeSeriesFacet` — one single-series plot. Registrations as an area with the y-domain fixed
+  to `0…total` and a reference hairline at the ceiling; connections as a **step** line, because
+  the samples are 5s buckets and a smoothed curve would imply resolution that does not exist.
+  Two facets sharing an x-axis, **never** one plot with two y-scales.
+- The x-axis domain ends at `max(snapshot time, newest sample)`. The snapshot and the history
+  are separate queries on different intervals, so the history routinely carries samples a few
+  seconds newer than the snapshot; anchoring on the snapshot alone draws them past the plot edge.
 
 ## Exercising the API locally
 
@@ -378,4 +544,41 @@ curl -s http://localhost:8090/api/seller-number/status -H "Authorization: Bearer
 
 # Unauthenticated → {"error": "Unauthorized: Admin access required"}
 curl "http://localhost:8090/api/seller-number/export-csv?eventId=your_event_id"
+
+# Public status — no auth. Grab a category id first (eventCategories is publicly listable).
+CAT=$(curl -s "http://localhost:8090/api/collections/eventCategories/records?perPage=1&fields=id" \
+  | jq -r '.items[0].id')
+curl -s "http://localhost:8090/api/seller-number/public-status?eventCategoryId=$CAT" | jq
+
+# Confirm nothing internal leaks — must print nothing
+curl -s "http://localhost:8090/api/seller-number/public-status?eventCategoryId=$CAT" \
+  | jq -r 'paths(scalars) | join(".")' \
+  | grep -Ei 'supportEmail|numbersSpec|warnings|appName|sessionTime|domain|Email|Phone|ipAddress|deviceUuid'
+
+# History for the charts
+curl -s "http://localhost:8090/api/seller-number/public-status/history?eventCategoryId=$CAT&windowMinutes=60" \
+  | jq '{bucketSeconds, registrationsTotal, reg:(.registrations|length), conn:(.connections|length)}'
+
+# Sampling dedupe: N requests over ~30s must yield rows == distinctBuckets ≈ elapsed/5
+for i in $(seq 1 60); do
+  curl -s "http://localhost:8090/api/seller-number/public-status?eventCategoryId=$CAT" >/dev/null
+  sleep 0.5
+done
+curl -s "http://localhost:8090/api/collections/statusSamples/records?perPage=500&sort=-bucketAt" \
+  -H "Authorization: Bearer $TOKEN" \
+  | jq '{rows:(.items|length), distinctBuckets:([.items[].bucketAt]|unique|length)}'
+```
+
+To check that `connections` is category-scoped without opening browser tabs, open a raw SSE
+client the way the SDK does — connect, read the `clientId` from the first event, then POST the
+subscription:
+
+```bash
+curl -sN http://localhost:8090/api/realtime > /tmp/sse.txt &
+CID=$(grep -o '"clientId":"[^"]*"' /tmp/sse.txt | head -1 | cut -d'"' -f4)
+curl -s -X POST http://localhost:8090/api/realtime -H "Content-Type: application/json" \
+  -d "{\"clientId\":\"$CID\",\"subscriptions\":[\"eventCategories/$CAT\"]}"
+
+# → connections for $CAT goes up by one; another category's figure is unaffected
+curl -s "http://localhost:8090/api/seller-number/public-status?eventCategoryId=$CAT" | jq .connections
 ```

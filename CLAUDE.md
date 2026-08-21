@@ -33,8 +33,34 @@ npm run deploy:ssh
 
 ## PocketBase hook conventions
 
-Route-registering files must end with `.pb.js`; plain `.js` files (`cache.js`, `email.js`) are
-shared modules loaded via ``require(`${__hooks}/name.js`)``.
+Route-registering files must end with `.pb.js`; plain `.js` files (`cache.js`, `email.js`,
+`berlin-time.js`, `status-core.js`, `status-samples.js`) are shared modules loaded via
+``require(`${__hooks}/name.js`)``. `status-sampler.pb.js` registers no routes but must still end
+in `.pb.js` to be loaded as a hook entry point.
+
+**Handlers cannot see their file's module scope.** A function passed to `routerAdd` or `cronAdd`
+runs in isolation — a `const` at the top of the hook file is `undefined` at request time, and the
+request fails with PocketBase's *generic* 400 envelope, which names nothing. Define every helper
+**inside** the handler and reach shared code through `require()` (which does work there):
+
+```javascript
+// ❌ undefined at request time          // ✅
+const HELPER = 42                        routerAdd('GET', '/x', (e) => {
+routerAdd('GET', '/x', (e) => {            const HELPER = 42
+  return e.json(200, { HELPER })           const { fn } = require(`${__hooks}/mod.js`)
+})                                       })
+```
+
+**Dates used as filter params need a space, not a `T`.** PocketBase stores `2026-08-20 22:54:00.000Z`
+and compares as a *string* in SQLite, so `toISOString()` (`T` = 0x54) sorts after every stored
+value of the same day (`" "` = 0x20) and matches nothing:
+
+```javascript
+// ❌ silently empty for same-day       // ✅
+{ now: new Date().toISOString() }        { now: toDbDate(new Date()) }  // status-core.js
+```
+
+The frontend is unaffected — `pb.filter()` does this conversion for `Date` values itself.
 
 **API usage** — the `dao()` API is gone in 0.30:
 
@@ -147,6 +173,10 @@ query/mutation functions in `withErrorLogging`.
    `eventCategories.domain` matching the current host; `EventCategoryIdProvider` renders `null`
 8. **Reservation picks an unexpected event** → `reservation.pb.js` sorts `-eventDate` (furthest
    future) while `useUpcomingEventQuery` sorts ascending (nearest). See `docs/ARCHITECTURE.md`
-9. **A `*Url` field shows up in the mail but not on the site** → the cors-proxy returns `res.json`
+9. **Endpoint returns `{"message":"Something went wrong…","status":400}`** → a handler referenced
+   something from the hook file's module scope. Move it inside the handler.
+10. **A date filter matches nothing, but only sometimes** → same-day comparison with a `T`
+   separator. Use `toDbDate()` from `status-core.js`.
+11. **A `*Url` field shows up in the mail but not on the site** → the cors-proxy returns `res.json`
    only, so a non-JSON response resolves to nothing client-side while `email.js` still accepts
    `response.raw`. See "URL text fields" in `docs/ARCHITECTURE.md`

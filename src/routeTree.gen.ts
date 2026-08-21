@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NoReservationRouteImport } from './routes/no-reservation'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VariationVariationIdSellerNumberSellerNumberSuccessRouteImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/success'
 import { Route as VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteImport } from './routes/variation.$variationId.sellerNumber.$sellerNumber/_withSessionCounter'
@@ -25,6 +26,11 @@ const VariationVariationIdSellerNumberSellerNumberRouteImport = createFileRoute(
 const NoReservationRoute = NoReservationRouteImport.update({
   id: '/no-reservation',
   path: '/no-reservation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -72,6 +78,7 @@ const VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRo
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/success': typeof VariationVariationIdSellerNumberSellerNumberSuccessRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/success': typeof VariationVariationIdSellerNumberSellerNumberSuccessRoute
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/live'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/success'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/live'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/success'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/live'
     | '/no-reservation'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LiveRoute: typeof LiveRoute
   NoReservationRoute: typeof NoReservationRoute
   VariationVariationIdSellerNumberSellerNumberRoute: typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
 }
@@ -137,6 +150,13 @@ declare module '@tanstack/react-router' {
       path: '/no-reservation'
       fullPath: '/no-reservation'
       preLoaderRoute: typeof NoReservationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -222,6 +242,7 @@ const VariationVariationIdSellerNumberSellerNumberRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LiveRoute: LiveRoute,
   NoReservationRoute: NoReservationRoute,
   VariationVariationIdSellerNumberSellerNumberRoute:
     VariationVariationIdSellerNumberSellerNumberRouteWithChildren,
