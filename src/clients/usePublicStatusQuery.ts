@@ -25,9 +25,24 @@ const CountsSchema = z.object({
   total: z.number(),
   registered: z.number(),
   reserved: z.number(),
+  // `available` counts every pool of the event, including ones that have not opened yet.
+  // `availableNow` is what a seller could actually obtain this second; `availableLater` is
+  // stock still locked behind a future release. Use `availableNow` wherever the UI says "frei".
   available: z.number(),
+  availableNow: z.number(),
+  availableLater: z.number(),
   expiredHolds: z.number(),
 })
+
+/** One future release wave. Pools sharing an `obtainableFrom` are grouped into one block. */
+const ReleaseBlockSchema = z.object({
+  opensAt: BerlinTimeSchema,
+  total: z.number(),
+  available: z.number(),
+  variations: z.array(z.string()),
+})
+
+export type ReleaseBlock = z.infer<typeof ReleaseBlockSchema>
 
 const ReleaseSchema = z.object({
   isObtainableNow: z.boolean(),
@@ -58,6 +73,7 @@ const PublicStatusSchema = z.object({
     })
   ),
   release: ReleaseSchema,
+  upcomingReleases: z.array(ReleaseBlockSchema),
   connections: z.number(),
 })
 

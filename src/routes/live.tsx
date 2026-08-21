@@ -111,6 +111,8 @@ function Live() {
 
   const { numbers, release } = status
   const taken = numbers.registered + numbers.reserved
+  // Stock currently in play: everything except what is still behind a future release.
+  const releasedTotal = numbers.total - numbers.availableLater
 
   return (
     <Card className="m-4 w-full max-w-3xl">
@@ -158,7 +160,15 @@ function Live() {
                 value={numbers.reserved}
                 hint="Nummer reserviert, Formular offen"
               />
-              <StatTile label="Noch frei" value={numbers.available} />
+              <StatTile
+                label="Noch frei"
+                value={numbers.availableNow}
+                hint={
+                  numbers.availableLater > 0
+                    ? `${numberFormatter.format(numbers.availableLater)} weitere noch gesperrt`
+                    : undefined
+                }
+              />
               <StatTile
                 label="Aktive Verbindungen"
                 value={status.connections}
@@ -167,15 +177,54 @@ function Live() {
               />
             </div>
 
-            <RemainingMeter total={numbers.total} taken={taken} fill={REGISTRATION_COLOR} />
+            {/* The meter covers only what is actually in play — counting locked stock as
+                "frei" would overstate availability. The blocks below account for the rest. */}
+            <RemainingMeter total={releasedTotal} taken={taken} fill={REGISTRATION_COLOR} />
 
-            <p className="text-sm text-slate-600">
-              {release.isObtainableNow
-                ? 'Nummern sind aktuell freigeschaltet.'
-                : release.nextOpensAt
-                  ? `Nächste Freischaltung: ${release.nextOpensAt.display}.`
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-slate-600">
+                {release.isObtainableNow
+                  ? 'Nummern sind aktuell freigeschaltet.'
                   : 'Derzeit sind keine Nummern freigeschaltet.'}
-            </p>
+              </p>
+
+              {status.upcomingReleases.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  Es sind keine weiteren Freischaltungen geplant — alle Nummern sind bereits
+                  im Umlauf.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-slate-400">
+                    {status.upcomingReleases.length === 1
+                      ? 'Kommende Freischaltung'
+                      : `Kommende Freischaltungen (${status.upcomingReleases.length.toString()})`}
+                  </span>
+                  {status.upcomingReleases.map((block) => (
+                    <div
+                      key={block.opensAt.utc}
+                      className="flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-slate-200 bg-slate-50/60 px-3 py-2"
+                    >
+                      <span className="text-sm text-slate-700">
+                        <span className="font-medium tabular-nums">
+                          {numberFormatter.format(block.total)}
+                        </span>{' '}
+                        {block.total === 1 ? 'Nummer' : 'Nummern'}
+                        {block.variations.length > 0 && (
+                          <span className="text-slate-500">
+                            {' · '}
+                            {block.variations.join(', ')}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs tabular-nums text-slate-500">
+                        ab {block.opensAt.display}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between gap-4">
@@ -240,11 +289,23 @@ function Live() {
                       {variation.name ?? 'Unbenannt'}
                     </span>
                     <span className="text-xs tabular-nums text-slate-500">
-                      {numberFormatter.format(variation.numbers.available)} von{' '}
-                      {numberFormatter.format(variation.numbers.total)} frei
-                      {!variation.release.isObtainableNow &&
-                        variation.release.nextOpensAt &&
-                        ` · ab ${variation.release.nextOpensAt.display}`}
+                      {/* "0 von 0 frei" is nonsense for a variation whose stock has not been
+                          released yet — say that instead. */}
+                      {variation.numbers.total - variation.numbers.availableLater === 0
+                        ? `noch nicht freigeschaltet · ${numberFormatter.format(
+                            variation.numbers.availableLater
+                          )} ab ${variation.release.nextOpensAt?.display ?? 'später'}`
+                        : `${numberFormatter.format(
+                            variation.numbers.availableNow
+                          )} von ${numberFormatter.format(
+                            variation.numbers.total - variation.numbers.availableLater
+                          )} frei${
+                            variation.numbers.availableLater > 0
+                              ? ` · ${numberFormatter.format(
+                                  variation.numbers.availableLater
+                                )} später`
+                              : ''
+                          }`}
                     </span>
                   </div>
                 ))}
