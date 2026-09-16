@@ -122,6 +122,12 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
   } catch (error) {
     throw exportError(404, 'Event not found')
   }
+  let category = null
+  try {
+    category = $app.findRecordById('eventCategories', event.get('eventCategory'))
+  } catch (error) {
+    // an event without a resolvable category still exports; the consumer sees categoryName null
+  }
 
   const pools = findOrEmpty('sellerNumberPools', 'event = {:eventId}', '', { eventId })
   if (pools.length === 0) {
@@ -235,11 +241,60 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
       eventName: event.get('eventName'),
       eventDate: event.get('eventDate'),
       yearMonth: yearMonthOf(event.get('eventDate')),
+      categoryId: event.get('eventCategory') || null,
+      categoryName: category ? category.get('eventCategoryName') : null,
+      categoryDomain: category ? category.get('domain') || null : null,
     },
     csvHeader: EXPECTED_HEADERS[mode].join(','),
     warnings,
     rows: slice,
   }
+}
+
+// Every event with its category and how many numbers have completed registration — what a
+// consumer needs to offer an event picker instead of asking for an id. Newest first. Counts
+// only, no seller data.
+const listExportEvents = ({ now }) => {
+  const categoriesById = {}
+  for (const category of findOrEmpty('eventCategories', 'id != ""', 'eventCategoryName')) {
+    categoriesById[category.get('id')] = category
+  }
+
+  const events = findOrEmpty('events', 'id != ""', '-eventDate')
+  const pools = findOrEmpty('sellerNumberPools', 'id != ""')
+  const registered = findOrEmpty('sellerNumbers', 'sellerDetails != ""')
+
+  const eventIdByPoolId = {}
+  const poolsPerEvent = {}
+  for (const pool of pools) {
+    eventIdByPoolId[pool.get('id')] = pool.get('event')
+    poolsPerEvent[pool.get('event')] = (poolsPerEvent[pool.get('event')] || 0) + 1
+  }
+  const registeredPerEvent = {}
+  for (const sellerNumber of registered) {
+    const eventId = eventIdByPoolId[sellerNumber.get('sellerNumberPool')]
+    if (eventId) registeredPerEvent[eventId] = (registeredPerEvent[eventId] || 0) + 1
+  }
+
+  const { parseDbDate } = require(`${__hooks}/status-core.js`)
+  const nowTime = (now || new Date()).getTime()
+
+  return events.map((event) => {
+    const category = categoriesById[event.get('eventCategory')]
+    const eventDate = event.get('eventDate')
+    return {
+      id: event.get('id'),
+      eventName: event.get('eventName'),
+      eventDate,
+      yearMonth: yearMonthOf(eventDate),
+      isUpcoming: !!eventDate && parseDbDate(eventDate).getTime() > nowTime,
+      categoryId: event.get('eventCategory') || null,
+      categoryName: category ? category.get('eventCategoryName') : null,
+      categoryDomain: category ? category.get('domain') || null : null,
+      pools: poolsPerEvent[event.get('id')] || 0,
+      registered: registeredPerEvent[event.get('id')] || 0,
+    }
+  })
 }
 
 // Render the CSV the consumer's csv_import.py reads: exact header, one line per row, flags as
@@ -298,6 +353,7 @@ module.exports = {
   isBabyVariation,
   yearMonthOf,
   buildAssignment,
+  listExportEvents,
   toCsv,
   toEnvelope,
 }

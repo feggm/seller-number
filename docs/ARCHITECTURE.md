@@ -95,7 +95,7 @@ via ``require(`${__hooks}/name.js`)``.
 | `reservation.pb.js` | POST `/api/seller-number/reservation` |
 | `registration.pb.js` | POST `/api/seller-number/registration` |
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` (thin caller of `export-core.js`) |
-| `export-assignment.pb.js` | GET `/api/seller-number/export-assignment` |
+| `export-assignment.pb.js` | GET `/api/seller-number/export-assignment` and `…/export-events` |
 | `status.pb.js` | GET `/api/seller-number/status` |
 | `public-status.pb.js` | GET `/api/seller-number/public-status` and `…/public-status/history` |
 | `status-sampler.pb.js` | route-free: the `statusHeartbeat` and `statusSamplesRetention` crons |
@@ -200,7 +200,8 @@ Column layouts, response examples, and error payloads are documented in
 {
   "schemaVersion": 1,
   "generatedAt": "2026-09-16T21:40:00.000Z", "mode": "kkm", "rowCount": 412, "truncated": false,
-  "event": { "id": "...", "eventName": "...", "eventDate": "2026-10-10 12:00:00.000Z", "yearMonth": "2026-Oct" },
+  "event": { "id": "...", "eventName": "...", "eventDate": "2026-10-10 12:00:00.000Z", "yearMonth": "2026-Oct",
+             "categoryId": "...", "categoryName": "Kinderkleidermarkt", "categoryDomain": "..." },
   "csvHeader": "nr,dnr,babynr,name,vorname,Strasse,plz,ort,tel,email,interesse_dnr,neu,ma",
   "checksum": "<sha256 hex of csv>",
   "warnings": [ { "code": "value_too_long", "nr": 88, "field": "email", "length": 52 } ],
@@ -222,6 +223,14 @@ Column layouts, response examples, and error payloads are documented in
 
 The consumer of this envelope is the FeG cash-desk system; its side of the contract, the
 business rules and the schedule are documented in the private kkm-db repository, not here.
+
+### GET /api/seller-number/export-events
+
+- **Auth**: superuser **or** an `apiClients` record, else 401
+- **Output**: `{ generatedAt, events: [...] }` — every event, newest first, with `id`, `eventName`,
+  `eventDate`, derived `yearMonth`, `isUpcoming`, its category (`categoryId`, `categoryName`,
+  `categoryDomain`), `pools` and `registered` (numbers with completed registration). Counts only,
+  no seller data. This is what a consumer offers as an event picker instead of asking for an id.
 
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can
 authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
