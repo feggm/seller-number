@@ -54,3 +54,25 @@ routerAdd('GET', '/api/seller-number/export-assignment', (e) => {
     return e.json(500, { error: 'Internal server error' })
   }
 })
+
+// GET /api/seller-number/export-events
+//
+// The picker behind the envelope: every event, newest first, with category, derived yearMonth
+// and the number of completed registrations. Same gate as the envelope; counts only.
+routerAdd('GET', '/api/seller-number/export-events', (e) => {
+  const core = require(`${__hooks}/export-core.js`)
+
+  if (!core.isExportClient(e)) {
+    return e.json(401, { error: 'Unauthorized: Admin access required' })
+  }
+
+  try {
+    return e.json(200, {
+      generatedAt: new Date().toISOString(),
+      events: core.listExportEvents({ now: new Date() }),
+    })
+  } catch (error) {
+    $app.logger().error('Error in export-events endpoint', 'error', error && error.message)
+    return e.json(500, { error: 'Internal server error' })
+  }
+})
