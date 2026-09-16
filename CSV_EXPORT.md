@@ -98,16 +98,22 @@ curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=
 
 ### One-liner: Authenticate and Export
 ```bash
-# Extract token and use it in one command (PocketBase 0.30.0+)
-TOKEN=$(curl -X POST https://reg.anziehbar-gummersbach.de/api/collections/_superusers/auth-with-password \
+# Prompts for event ID, mode, admin e-mail and password (password is not echoed), then exports (PocketBase 0.30.0+)
+printf 'Event-ID: ' && read -r EVENT_ID && \
+printf 'Modus [kkm/azb] (Enter = kkm): ' && read -r MODE && MODE=${MODE:-kkm} && \
+printf 'Admin-E-Mail: ' && read -r IDENTITY && printf 'Passwort: ' && read -rs PASSWORD && echo && \
+TOKEN=$(curl -s -X POST https://reg.anziehbar-gummersbach.de/api/collections/_superusers/auth-with-password \
   -H "Content-Type: application/json" \
-  -d '{"identity":"admin@example.com","password":"your_password"}' \
-  | jq -r '.token')
-
-curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=abc123xyz&mode=kkm" \
+  -d "$(jq -n --arg i "$IDENTITY" --arg p "$PASSWORD" '{identity: $i, password: $p}')" \
+  | jq -r '.token') && unset PASSWORD && \
+curl "https://reg.anziehbar-gummersbach.de/api/seller-number/export-csv?eventId=$EVENT_ID&mode=$MODE" \
   -H "Authorization: Bearer $TOKEN" \
-  -o seller-numbers.csv
+  -o "seller-numbers-$MODE.csv"
 ```
+
+Works in both zsh and bash. The JSON body is built with `jq -n --arg`, so passwords containing
+quotes or backslashes are escaped correctly. The output file is named after the chosen mode
+(`seller-numbers-kkm.csv` / `seller-numbers-azb.csv`).
 
 ## Response Format
 
