@@ -34,7 +34,7 @@ npm run deploy:ssh
 ## PocketBase hook conventions
 
 Route-registering files must end with `.pb.js`; plain `.js` files (`cache.js`, `email.js`,
-`berlin-time.js`, `status-core.js`, `status-samples.js`) are shared modules loaded via
+`berlin-time.js`, `status-core.js`, `status-samples.js`, `export-core.js`) are shared modules loaded via
 ``require(`${__hooks}/name.js`)``. `status-sampler.pb.js` registers no routes but must still end
 in `.pb.js` to be loaded as a hook entry point.
 
@@ -93,7 +93,8 @@ Prefer bound params (`'event = {:eventId}'` + a params object) over string conca
 multi-id OR filters in `reservation.pb.js` / `csv-export.pb.js` are built by concatenation
 because the param count is dynamic.
 
-**Auth** — only the CSV export requires it. In 0.30.0+ admins are "superusers":
+**Auth** — the two export routes require it (`export-core.js` `isExportClient`: superuser or an
+`apiClients` record), `status` requires a superuser. In 0.30.0+ admins are "superusers":
 
 ```javascript
 const authRecord = e.auth

@@ -43,6 +43,9 @@ Schema below reflects the current state after all migrations in `pb_migrations/`
 The two `*Url` fields hold an address whose content replaces the matching editor field — see
 [URL text fields](#url-text-fields).
 
+A variation whose name matches `/baby/i` (the production one is called "Babynummer") is the
+source of the `babynr` column in the exports — see `export-core.js`. There is no separate flag.
+
 ### 4. sellerNumberPools (`pbc_1981446857`)
 
 `sellerNumberVariation` (relation, required), `event` (relation, required),
@@ -61,7 +64,12 @@ The two `*Url` fields hold an address whose content replaces the matching editor
 ### 6. sellerDetails (`pbc_418131918`)
 
 `sellerFirstName` (text, required), `sellerLastName` (text, required),
-`sellerEmail` (email, required), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text)
+`sellerEmail` (email, required), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text),
+`isStaff` (bool — the `ma` column of the exports; set by hand in the admin UI)
+
+`createRule` is `null` (was `""` until migration `1789594432`): registrations are written by
+`registration.pb.js` through `$app`, nothing creates these records via the standard API. The
+same closure applies to `sellerNumbers` (`1789594431`).
 
 ### 7. statusSamples
 
@@ -86,7 +94,8 @@ via ``require(`${__hooks}/name.js`)``.
 |---|---|
 | `reservation.pb.js` | POST `/api/seller-number/reservation` |
 | `registration.pb.js` | POST `/api/seller-number/registration` |
-| `csv-export.pb.js` | GET `/api/seller-number/export-csv` |
+| `csv-export.pb.js` | GET `/api/seller-number/export-csv` (thin caller of `export-core.js`) |
+| `export-assignment.pb.js` | GET `/api/seller-number/export-assignment` |
 | `status.pb.js` | GET `/api/seller-number/status` |
 | `public-status.pb.js` | GET `/api/seller-number/public-status` and `…/public-status/history` |
 | `status-sampler.pb.js` | route-free: the `statusHeartbeat` and `statusSamplesRetention` crons |
@@ -97,6 +106,7 @@ via ``require(`${__hooks}/name.js`)``.
 | `cache.js` | shared in-memory cache, 10 min TTL |
 | `berlin-time.js` | shared module: `formatBerlin`, `berlinZoneInfo` — UTC → Europe/Berlin |
 | `status-core.js` | shared module: tree loading, per-pool classification, `toDbDate`, `countCategoryClients` |
+| `export-core.js` | shared module: `buildAssignment`, `toCsv`, `toEnvelope`, `isExportClient` — one assignment, rendered as CSV download and as JSON envelope |
 | `status-samples.js` | shared module: bucketing, append-only sample I/O, retention sweep |
 
 > **Handlers cannot see their file's module scope.** A function registered with `routerAdd` or
@@ -169,14 +179,54 @@ and Cloudflare filled in `max-age=86400` — which is where the stale-build prob
 
 ### GET /api/seller-number/export-csv
 
-- **Auth**: **superuser required** (`e.auth.collection().name === '_superusers'`), else 401
+- **Auth**: superuser **or** an `apiClients` record (`export-core.js` `isExportClient`), else 401
 - **Query params**: `eventId` (required), `mode` = `"kkm"` | `"azb"` (default `"kkm"`)
 - **Output**: CSV download; filename derived from `eventName`
-- **Logic**: all seller numbers across the event's pools that have `sellerDetails` set.
+- **Logic**: `buildAssignment` + `toCsv` from `export-core.js` — all seller numbers across the
+  event's pools that have `sellerDetails` set, sorted by number. Byte-identical to the `csv`
+  inside the `export-assignment` envelope below.
 
 Column layouts, response examples, and error payloads are documented in
-[`../CSV_EXPORT.md`](../CSV_EXPORT.md). Only `nr`, `name`, `vorname`, `tel`, and `email` are
-populated; every other column is emitted empty because no DB field backs it yet.
+[`../CSV_EXPORT.md`](../CSV_EXPORT.md).
+
+### GET /api/seller-number/export-assignment
+
+- **Auth**: superuser **or** an `apiClients` record, else 401 — checked before any DB access
+- **Query params**: `eventId` (required), `mode` = `"kkm"` | `"azb"` (default `"kkm"`),
+  `limit` (0–5000, default all), `offset` (default 0)
+- **Output**: JSON envelope, `schemaVersion: 1` — extended additively; a breaking change bumps it
+
+```json
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-16T21:40:00.000Z", "mode": "kkm", "rowCount": 412, "truncated": false,
+  "event": { "id": "...", "eventName": "...", "eventDate": "2026-10-10 12:00:00.000Z", "yearMonth": "2026-Oct" },
+  "csvHeader": "nr,dnr,babynr,name,vorname,Strasse,plz,ort,tel,email,interesse_dnr,neu,ma",
+  "checksum": "<sha256 hex of csv>",
+  "warnings": [ { "code": "value_too_long", "nr": 88, "field": "email", "length": 52 } ],
+  "rows": [ { "key": "<sellerNumbers.id>", "sellerDetailsId": "...", "nr": 42,
+              "dnr": false, "babynr": false, "neu": false, "ma": false,
+              "name": "Müller", "vorname": "Anna", "tel": "...", "email": "..." } ],
+  "csv": "nr,dnr,...\n42,,,Müller,Anna,,,,...\n"
+}
+```
+
+- `rows[].key` is the `sellerNumbers` id, `sellerDetailsId` the registration — together they
+  let a consumer tell "same number, different person" from "same person, new number".
+- `event.yearMonth` is the month of `eventDate` in Europe/Berlin as `YYYY-Mon` — no DB field.
+- Warning codes: `duplicate_number` (one number from two pools of the event), `value_too_long`
+  (name/vorname/tel/email over 45 characters), `unsafe_sql_char` (a backslash in a value),
+  `missing_seller_details` (a registered number whose details record is gone; the row is skipped).
+- Errors: 400 (`eventId` missing, bad `mode`, `limit`/`offset` out of range), 404 (event or
+  pools not found), 500. Never contains `ipAddress`, `deviceUuid` or `created`.
+
+The consumer of this envelope is the FeG cash-desk system; its side of the contract, the
+business rules and the schedule are documented in the private kkm-db repository, not here.
+
+**`apiClients`** is an auth collection with every API rule `null`: a record in it can
+authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
+login alert mail on) and call the two export routes — and nothing else, not even read its own
+record. It exists so that a machine consumer never holds a superuser password.
 
 ### GET /api/seller-number/status
 
@@ -585,13 +635,19 @@ curl -X POST http://localhost:8090/api/seller-number/registration \
 # Server time
 curl http://localhost:8090/api/seller-number/now
 
-# CSV export — authenticate as superuser first
+# CSV export — authenticate as superuser first (an apiClients record works the same way with
+# /api/collections/apiClients/auth-with-password)
 TOKEN=$(curl -s -X POST http://localhost:8090/api/collections/_superusers/auth-with-password \
   -H "Content-Type: application/json" \
   -d '{"identity": "admin@example.com", "password": "your_admin_password"}' | jq -r '.token')
 
 curl "http://localhost:8090/api/seller-number/export-csv?eventId=your_event_id&mode=kkm" \
   -H "Authorization: Bearer $TOKEN" -o seller-numbers-kkm.csv
+
+# The JSON envelope the cash-desk admin pulls — same rows, CSV embedded, checksum over it
+curl -s "http://localhost:8090/api/seller-number/export-assignment?eventId=your_event_id&mode=kkm" \
+  -H "Authorization: Bearer $TOKEN" | tee /tmp/assignment.json | jq '{rowCount, checksum, warnings, event}'
+jq -r .csv /tmp/assignment.json | shasum -a 256   # must equal .checksum
 
 # Status report — same superuser token
 curl -s http://localhost:8090/api/seller-number/status -H "Authorization: Bearer $TOKEN" | jq

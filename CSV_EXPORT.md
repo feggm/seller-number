@@ -4,14 +4,16 @@
 The CSV export endpoint allows you to export seller registration data for a specific event in CSV format. This is useful for importing seller data into other systems or for reporting purposes.
 
 ## ⚠️ Security & Authentication
-**This endpoint requires admin authentication.** It contains sensitive personal data (names, phone numbers, emails) and will return `401 Unauthorized` if accessed without proper admin credentials.
+**This endpoint requires authentication.** It contains sensitive personal data (names, phone numbers, emails) and will return `401 Unauthorized` if accessed without credentials. Accepted: a superuser, or a record of the `apiClients` auth collection — a machine account that can call the export endpoints and nothing else (see `docs/ARCHITECTURE.md`).
+
+There is a second, machine-readable form of the same export: `GET /api/seller-number/export-assignment` returns a JSON envelope with the rows, the identical CSV embedded and a sha256 checksum over it. Both are rendered by `pb_hooks/export-core.js`, so the download here and the `csv` in the envelope are byte-identical.
 
 ## Endpoint
 ```
 GET /api/seller-number/export-csv
 ```
 
-**Authentication**: Admin only (Bearer token required)
+**Authentication**: superuser or `apiClients` record (Bearer token required)
 
 ## Query Parameters
 
@@ -28,8 +30,8 @@ Exports with the following CSV columns:
 | Column | Description | Current Status |
 |--------|-------------|----------------|
 | `nr` | Seller number | ✅ Available |
-| `dnr` | Dauernummer (permanent number flag) | ⚠️ Empty (not in DB) |
-| `babynr` | Babynummer (baby number flag) | ⚠️ Empty (not in DB) |
+| `dnr` | Dauernummer (permanent number flag) | ⚠️ Empty until the Dauernummer register exists |
+| `babynr` | Babynummer (baby number flag) | ✅ `B` when the number's variation is named like `/baby/i` |
 | `name` | Last name (Nachname) | ✅ Available |
 | `vorname` | First name (Vorname) | ✅ Available |
 | `Strasse` | Street address | ⚠️ Empty (not in DB) |
@@ -37,9 +39,9 @@ Exports with the following CSV columns:
 | `ort` | City | ⚠️ Empty (not in DB) |
 | `tel` | Phone number | ✅ Available |
 | `email` | Email address | ✅ Available |
-| `interesse_dnr` | Interest in permanent number | ⚠️ Empty (not in DB) |
-| `neu` | New seller flag | ⚠️ Empty (not in DB) |
-| `ma` | Employee flag (Mitarbeiter) | ⚠️ Empty (not in DB) |
+| `interesse_dnr` | Interest in permanent number | ⚠️ Always empty — the consumer never reads it |
+| `neu` | New seller flag | ⚠️ Always empty — determined on the consumer side against its own history |
+| `ma` | Employee flag (Mitarbeiter) | ✅ `M` when `sellerDetails.isStaff` is set |
 
 ### AZB Mode (`mode=azb`)
 Exports with the following CSV columns:
@@ -52,7 +54,7 @@ Exports with the following CSV columns:
 | `ab-status` | AB-Status | ⚠️ Empty (not in DB) |
 | `tel` | Phone number | ✅ Available |
 | `email` | Email address | ✅ Available |
-| `ma` | Employee flag | ⚠️ Empty (not in DB) |
+| `ma` | Employee flag | ✅ `M` when `sellerDetails.isStaff` is set |
 
 ## Authentication
 
@@ -187,9 +189,9 @@ The endpoint:
 - Empty fields are represented as empty strings
 
 ## Security Notes
-- **Admin/Superuser authentication is enforced** - only authenticated superuser accounts can access this endpoint
+- **Authentication is enforced** - superusers and `apiClients` records only; the latter cannot reach any other route or collection
 - The endpoint contains sensitive personal data and should only be accessed by authorized personnel
-- Tokens expire based on PocketBase configuration (default: 7 days)
+- Tokens expire based on PocketBase configuration (superusers: default 7 days; `apiClients`: 1 hour)
 - For production use, ensure HTTPS is enabled to protect tokens in transit
 - Consider implementing additional logging/auditing for CSV exports in production
 - **PocketBase Version**: This documentation assumes PocketBase 0.30.0+ which uses `_superusers` collection for admins
