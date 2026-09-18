@@ -86,6 +86,11 @@ erDiagram
         select status "aktiv | pausiert | freigegeben | gesperrt"
         date heldSince
         date releasedAt
+        bool reviewFlag "last review export"
+        date reviewedAt
+        number reviewMarkets "active markets in the window"
+        number avgItemsSold
+        number avgRevenueCents
     }
 
     syncLog {
