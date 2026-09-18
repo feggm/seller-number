@@ -61,6 +61,7 @@ migrate(
             'export-ack',
             'permanent-numbers-import',
             'permanent-numbers-materialise',
+            'permanent-numbers-review',
           ],
         },
         {

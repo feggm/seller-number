@@ -12,6 +12,7 @@ const KINDS = [
   'export-ack',
   'permanent-numbers-import',
   'permanent-numbers-materialise',
+  'permanent-numbers-review',
 ]
 
 const clientLabel = (e) => {

@@ -116,7 +116,7 @@ holder: there are no real Dauernummern at Anziehbar, but the concept is the same
 ### 10. syncLog
 
 `direction` (select: `out` | `in`), `kind` (select: `export-assignment` | `export-events` |
-`export-ack` | `permanent-numbers-import` | `permanent-numbers-materialise`), `event`
+`export-ack` | `permanent-numbers-import` | `permanent-numbers-materialise` | `permanent-numbers-review`), `event`
 (relation, optional), `client` (text — `superuser` or the apiClients email, never a token),
 `mode` (text), `checksum` (text, 64 hex), `rowCount` (number), `dryRun` (bool), `status`
 (select: `ok` | `error`), `summary` (json — counters and case classes only, never a name or
