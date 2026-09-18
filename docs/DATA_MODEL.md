@@ -12,6 +12,10 @@ erDiagram
     sellerNumberVariations ||--o{ sellerNumberPools : "sellerNumberVariation"
     sellerNumberPools ||--o{ sellerNumbers : "sellerNumberPool"
     sellerDetails |o--o| sellerNumbers : "sellerDetails (optional)"
+    permanentNumberHolders ||--o{ permanentNumbers : "holder"
+    sellerNumberVariations ||--o{ permanentNumbers : "sellerNumberVariation"
+    permanentNumberHolders |o--o{ sellerDetails : "permanentNumberHolder (optional)"
+    events |o--o{ syncLog : "event (optional)"
 
     eventCategories {
         text eventCategoryName "required"
@@ -60,6 +64,41 @@ erDiagram
         text sellerPhone
         text ipAddress
         text deviceUuid
+        bool isStaff "ma column of the exports"
+        relation permanentNumberHolder FK "optional, set by materialise"
+    }
+
+    permanentNumberHolders {
+        text holderFirstName "required"
+        text holderLastName "required"
+        email holderEmail "required"
+        text holderPhone
+        text holderFirstNameHash "sha256 of normalised name"
+        text holderLastNameHash "sha256 of normalised name"
+        bool isStaff
+        text holderNote
+    }
+
+    permanentNumbers {
+        relation sellerNumberVariation FK "required - variation, not event"
+        number permanentNumberNumber "required"
+        relation holder FK "required"
+        select status "aktiv | pausiert | freigegeben | gesperrt"
+        date heldSince
+        date releasedAt
+    }
+
+    syncLog {
+        select direction "out | in"
+        select kind "export-assignment | export-events | export-ack | permanent-numbers-import | permanent-numbers-materialise"
+        relation event FK "optional"
+        text client "superuser or apiClients email"
+        text checksum "sha256 of the export"
+        number rowCount
+        bool dryRun
+        select status "ok | error"
+        json summary "counters only, never a name"
+        date finishedAt
     }
 
     statusSamples {
@@ -85,4 +124,8 @@ erDiagram
   cascade when its `eventCategory` is deleted, and swept by the `statusSamplesRetention` cron
   after 90 days.
 - `sellerNumberPools.listRule` and `sellerNumbers.listRule` are both `""` (public) — see
-  `docs/ARCHITECTURE.md` § public-status.
+  `docs/ARCHITECTURE.md` § public-status. A materialised Dauernummer is therefore visible as
+  *taken* like any other number, nothing more.
+- `permanentNumbers` is unique on `(sellerNumberVariation, permanentNumberNumber)`; that index,
+  not a check in code, makes the register import idempotent. `permanentNumberHolders`,
+  `permanentNumbers` and `syncLog` are superuser-only on all five rules.

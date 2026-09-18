@@ -65,7 +65,9 @@ source of the `babynr` column in the exports — see `export-core.js`. There is 
 
 `sellerFirstName` (text, required), `sellerLastName` (text, required),
 `sellerEmail` (email, required), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text),
-`isStaff` (bool — the `ma` column of the exports; set by hand in the admin UI)
+`isStaff` (bool — the `ma` column of the exports; set by hand in the admin UI),
+`permanentNumberHolder` (relation → permanentNumberHolders, optional — set only on rows the
+Dauernummer register materialised; this is what turns `dnr` on in the exports)
 
 `createRule` is `null` (was `""` until migration `1789594432`): registrations are written by
 `registration.pb.js` through `$app`, nothing creates these records via the standard API. The
@@ -85,6 +87,39 @@ Only the connection count is stored. The number counts are exactly reconstructab
 `sellerDetails.created` + `sellerNumbers`, so persisting them would be a second, drift-prone
 copy; the connection count exists only in Go process memory and is otherwise unrecoverable.
 
+### 8. permanentNumberHolders
+
+`holderFirstName` / `holderLastName` (text, required), `holderEmail` (email, required),
+`holderPhone` (text), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
+the normalised name, kept current by a record hook), `isStaff` (bool), `holderNote` (text)
+
+The durable person behind a Dauernummer. `sellerDetails` is a per-event artefact; this is the
+identity the register keeps across markets. All API rules `null`.
+
+### 9. permanentNumbers
+
+`sellerNumberVariation` (relation, required — the variation, not the event: that is what makes
+the number outlive a market), `permanentNumberNumber` (number, required), `holder` (relation →
+permanentNumberHolders, required), `status` (select: `aktiv` | `pausiert` | `freigegeben` |
+`gesperrt`), `heldSince` (date), `releasedAt` (date)
+
+Unique index on `(sellerNumberVariation, permanentNumberNumber)` — the import is idempotent
+because of it. All API rules `null`. AZB staff numbers live here too, with `isStaff` on the
+holder: there are no real Dauernummern at Anziehbar, but the concept is the same.
+
+### 10. syncLog
+
+`direction` (select: `out` | `in`), `kind` (select: `export-assignment` | `export-events` |
+`export-ack` | `permanent-numbers-import` | `permanent-numbers-materialise`), `event`
+(relation, optional), `client` (text — `superuser` or the apiClients email, never a token),
+`mode` (text), `checksum` (text, 64 hex), `rowCount` (number), `dryRun` (bool), `status`
+(select: `ok` | `error`), `summary` (json — counters and case classes only, never a name or
+row), `ipAddress` (text), `startedAt` / `finishedAt` (date)
+
+Append-only record of every synchronisation in or out. All API rules `null`; the latest
+entry per kind is served by `GET /api/seller-number/sync-status`. Written by `sync-log.js`,
+which never throws — a failed log row must not fail an export.
+
 ## Backend hooks
 
 Route-registering files must end with `.pb.js`; plain `.js` files are shared modules loaded
@@ -95,7 +130,10 @@ via ``require(`${__hooks}/name.js`)``.
 | `reservation.pb.js` | POST `/api/seller-number/reservation` |
 | `registration.pb.js` | POST `/api/seller-number/registration` |
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` (thin caller of `export-core.js`) |
-| `export-assignment.pb.js` | GET `/api/seller-number/export-assignment` and `…/export-events` |
+| `export-assignment.pb.js` | GET `/api/seller-number/export-assignment`, `…/export-events`, `…/sync-status`; POST `…/export-ack` |
+| `permanent-numbers.pb.js` | POST `/api/seller-number/permanent-numbers/import` and `…/materialise`; holder hash hooks |
+| `permanent-numbers-core.js` | the register: import and materialisation logic, dry-run transactions |
+| `sync-log.js` | `writeSyncLog`, `latestPerKind` |
 | `status.pb.js` | GET `/api/seller-number/status` |
 | `public-status.pb.js` | GET `/api/seller-number/public-status` and `…/public-status/history` |
 | `status-sampler.pb.js` | route-free: the `statusHeartbeat` and `statusSamplesRetention` crons |
@@ -232,10 +270,60 @@ business rules and the schedule are documented in the private kkm-db repository,
   `categoryDomain`), `pools` and `registered` (numbers with completed registration). Counts only,
   no seller data. This is what a consumer offers as an event picker instead of asking for an id.
 
+### POST /api/seller-number/export-ack
+
+- **Auth**: superuser **or** an `apiClients` record, else 401
+- **Input**: `{ eventId, mode, checksum, rowCount, yearMonth, committedAt }` — all validated
+  (checksum 64 hex, `yearMonth` `YYYY-Mon`, event must exist)
+- **Output**: `{ acknowledged: true, id }`; writes one `syncLog` row (`in` / `export-ack`)
+
+The consumer saying "this checksum is now the market's file". A pull is not a sync; the
+consumer's commit is, and this is how PocketBase learns about it. The only route on which an
+`apiClients` account writes anything — and all it can write is one log row.
+
+### GET /api/seller-number/sync-status[?eventId=]
+
+- **Auth**: superuser **or** an `apiClients` record, else 401
+- **Output**: `{ generatedAt, eventId, latest: { <kind>: {...} | null } }` — the newest
+  non-dry-run `syncLog` entry per kind (`finishedAt`, `status`, `client`, `checksum`,
+  `rowCount`, `summary`). With `eventId`, event-bound kinds are filtered to that event;
+  `export-events` and `permanent-numbers-import` are not event-bound and always show.
+
+### POST /api/seller-number/permanent-numbers/import
+
+- **Auth**: superuser only
+- **Input**: `{ dryRun, holders: [{ number, variation, firstName, lastName, email, phone?,
+  isStaff?, heldSince? }] }` (≤ 1000 rows; `variation` is a `sellerNumberVariations` id)
+- **Output**: `{ dryRun, counts: { created, already, conflict, holdersCreated, holdersReused },
+  results: [{ number, variation, result, ... }] }`
+
+Loads the Dauernummer register: reuses the holder whose email and name hashes match, else
+creates one; then `created` (new `permanentNumbers` row, status `aktiv`), `already` (same
+holder) or `conflict` (a different holder has the number — reported, never overwritten). A
+holder is created no earlier than the number that needs it. One transaction; `dryRun` walks
+the identical path and rolls back, so its report is exactly what the real run does.
+
+### POST /api/seller-number/permanent-numbers/materialise
+
+- **Auth**: superuser only
+- **Input**: `{ eventId, source: "register", dryRun }` — `source: "confirmations"` answers 501
+  until the confirmation cycle exists
+- **Output**: `{ dryRun, event, registerRows, counts: { created, already, conflict, notInPool,
+  skipped, deadHoldsReplaced }, results: [...] }`
+
+For every `aktiv` register row whose variation has a pool in the event: the number must lie in
+the pool's declared range (`notInPool` otherwise — extend `numbersAsJsonArray` first, and mind
+the `{"from":0}` pitfall); then, at `(pool, number)`: a completed registration by this holder →
+`already`; by anyone else → `conflict`, never overwritten; a dead hold (no `sellerDetails`) is
+deleted; otherwise a `sellerDetails` row (name/mail/phone/`isStaff` from the holder,
+`permanentNumberHolder` set) and a `sellerNumbers` row are created. No mail is sent. One
+transaction, `dryRun` rolls back.
+
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can
 authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
-login alert mail on) and call the two export routes — and nothing else, not even read its own
-record. It exists so that a machine consumer never holds a superuser password.
+login alert mail on) and call the export routes, `sync-status` and `export-ack` — and nothing
+else, not even read its own record. It exists so that a machine consumer never holds a
+superuser password.
 
 ### GET /api/seller-number/status
 
@@ -657,6 +745,18 @@ curl "http://localhost:8090/api/seller-number/export-csv?eventId=your_event_id&m
 curl -s "http://localhost:8090/api/seller-number/export-assignment?eventId=your_event_id&mode=kkm" \
   -H "Authorization: Bearer $TOKEN" | tee /tmp/assignment.json | jq '{rowCount, checksum, warnings, event}'
 jq -r .csv /tmp/assignment.json | shasum -a 256   # must equal .checksum
+
+# Dauernummer register: load two holders (dry run first), then reserve their numbers for an event
+curl -s -X POST http://localhost:8090/api/seller-number/permanent-numbers/import \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"dryRun":true,"holders":[{"number":5,"variation":"your_variation_id","firstName":"Anna","lastName":"Müller","email":"anna@example.com","heldSince":"2011-04-09"}]}' | jq .counts
+curl -s -X POST http://localhost:8090/api/seller-number/permanent-numbers/materialise \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"eventId":"your_event_id","source":"register","dryRun":true}' | jq '{counts, results}'
+
+# What synced when — newest real entry per kind
+curl -s "http://localhost:8090/api/seller-number/sync-status?eventId=your_event_id" \
+  -H "Authorization: Bearer $TOKEN" | jq .latest
 
 # Status report — same superuser token
 curl -s http://localhost:8090/api/seller-number/status -H "Authorization: Bearer $TOKEN" | jq
