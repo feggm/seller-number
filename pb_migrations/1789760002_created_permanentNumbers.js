@@ -106,11 +106,8 @@ migrate(
           system: false,
           type: 'date',
         },
-        // Snapshot of the last review export from the cash-desk side (kkm-db-v2-datamodel.md
-        // "Feeding the review flag"): the last market's figures, the windowed averages over the
-        // last four active markets, and the flag the window produced. The flag rests on the
-        // averages only; the last* pair is for the operator's eye. Money in cents, like
-        // everywhere on the cash-desk side.
+        // The review flag the last statistics sync produced (permanentNumberMarkets holds
+        // the figures it rests on; see 1789760005). Advisory — a human decides what follows.
         {
           hidden: false,
           id: 'bool_pn_reviewFlag',
@@ -130,66 +127,6 @@ migrate(
           required: false,
           system: false,
           type: 'date',
-        },
-        {
-          hidden: false,
-          id: 'number_pn_reviewMarkets',
-          max: null,
-          min: 0,
-          name: 'reviewMarkets',
-          onlyInt: true,
-          presentable: false,
-          required: false,
-          system: false,
-          type: 'number',
-        },
-        {
-          hidden: false,
-          id: 'number_pn_avgItemsSold',
-          max: null,
-          min: 0,
-          name: 'avgItemsSold',
-          onlyInt: false,
-          presentable: false,
-          required: false,
-          system: false,
-          type: 'number',
-        },
-        {
-          hidden: false,
-          id: 'number_pn_lastItemsSold',
-          max: null,
-          min: 0,
-          name: 'lastItemsSold',
-          onlyInt: true,
-          presentable: false,
-          required: false,
-          system: false,
-          type: 'number',
-        },
-        {
-          hidden: false,
-          id: 'number_pn_lastRevenueCents',
-          max: null,
-          min: 0,
-          name: 'lastRevenueCents',
-          onlyInt: true,
-          presentable: false,
-          required: false,
-          system: false,
-          type: 'number',
-        },
-        {
-          hidden: false,
-          id: 'number_pn_avgRevenueCents',
-          max: null,
-          min: 0,
-          name: 'avgRevenueCents',
-          onlyInt: true,
-          presentable: false,
-          required: false,
-          system: false,
-          type: 'number',
         },
         {
           hidden: false,

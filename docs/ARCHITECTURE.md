@@ -101,19 +101,39 @@ identity the register keeps across markets. All API rules `null`.
 `sellerNumberVariation` (relation, required — the variation, not the event: that is what makes
 the number outlive a market), `permanentNumberNumber` (number, required), `holder` (relation →
 permanentNumberHolders, required), `status` (select: `aktiv` | `pausiert` | `freigegeben` |
-`gesperrt`), `heldSince` (date), `releasedAt` (date), and the snapshot of the last review
-export from the cash-desk side: `reviewFlag` (bool), `reviewedAt` (date), `reviewMarkets`
-(number — active markets in the window), `lastItemsSold` / `lastRevenueCents` (the last
-market), `avgItemsSold` / `avgRevenueCents` (the four-market window). The flag rests on the
-averages, never on a single market (`kkm-db-v2-datamodel.md`, "Feeding the review flag");
-the last* pair is there for the operator to see. Cents throughout. Nothing writes these yet —
-the review sync after a market is the cash-desk side's job (KKM-legacy plan §1.10).
+`gesperrt`), `heldSince` (date), `releasedAt` (date), `reviewFlag` (bool) / `reviewedAt` (date —
+the advisory flag the last statistics sync produced; the figures behind it live in
+`permanentNumberMarkets`)
 
 Unique index on `(sellerNumberVariation, permanentNumberNumber)` — the import is idempotent
 because of it. All API rules `null`. AZB staff numbers live here too, with `isStaff` on the
 holder: there are no real Dauernummern at Anziehbar, but the concept is the same.
 
-### 10. syncLog
+### 10. permanentNumberMarkets
+
+`permanentNumber` (relation, required, cascade delete), `market` (text `YYYY-Mon`, required),
+`event` (relation, optional — old markets predate the events collection), `itemsSold` (number),
+`revenueCents` (number)
+
+One row per (Dauernummer, market): the raw figures, not aggregates — mean, median and trend are
+computed on read, so nothing drifts. Pushed by the cash-desk side after each market
+(KKM-legacy plan §1.10), which keeps the newest four rows per number and deletes older ones;
+a paused market simply has no row. Unique on `(permanentNumber, market)`, so a repeated push
+overwrites in place. Numbers and cents only. All API rules `null`.
+
+### 11. marketStats
+
+`eventCategory` (relation, required), `market` (text `YYYY-Mon`, required), `event` (relation,
+optional), `sellers` (number), `itemsMean` / `itemsMedian` / `revenueCentsMean` /
+`revenueCentsMedian` (all sellers of that market), `permanentSellers`, `permanentItemsMean` /
+`permanentItemsMedian` / `permanentRevenueCentsMean` / `permanentRevenueCentsMedian` (the
+sellers holding a Dauernummer)
+
+The baselines a Dauernummer is measured against, one row per (category, market), kept for every
+market. Pushed together with `permanentNumberMarkets`. Unique on `(eventCategory, market)`. All
+API rules `null`.
+
+### 12. syncLog
 
 `direction` (select: `out` | `in`), `kind` (select: `export-assignment` | `export-events` |
 `export-ack` | `permanent-numbers-import` | `permanent-numbers-materialise` | `permanent-numbers-review`), `event`

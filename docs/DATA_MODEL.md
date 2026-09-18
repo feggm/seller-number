@@ -16,6 +16,8 @@ erDiagram
     sellerNumberVariations ||--o{ permanentNumbers : "sellerNumberVariation"
     permanentNumberHolders |o--o{ sellerDetails : "permanentNumberHolder (optional)"
     events |o--o{ syncLog : "event (optional)"
+    permanentNumbers ||--o{ permanentNumberMarkets : "permanentNumber (cascade delete)"
+    eventCategories ||--o{ marketStats : "eventCategory"
 
     eventCategories {
         text eventCategoryName "required"
@@ -86,13 +88,32 @@ erDiagram
         select status "aktiv | pausiert | freigegeben | gesperrt"
         date heldSince
         date releasedAt
-        bool reviewFlag "last review export"
+        bool reviewFlag "advisory, from the last statistics sync"
         date reviewedAt
-        number reviewMarkets "active markets in the window"
-        number lastItemsSold "last market"
-        number lastRevenueCents "last market"
-        number avgItemsSold "four-market window"
-        number avgRevenueCents "four-market window"
+    }
+
+    permanentNumberMarkets {
+        relation permanentNumber FK "required, cascade delete"
+        text market "YYYY-Mon, required"
+        relation event FK "optional"
+        number itemsSold
+        number revenueCents
+    }
+
+    marketStats {
+        relation eventCategory FK "required"
+        text market "YYYY-Mon, required"
+        relation event FK "optional"
+        number sellers
+        number itemsMean
+        number itemsMedian
+        number revenueCentsMean
+        number revenueCentsMedian
+        number permanentSellers
+        number permanentItemsMean
+        number permanentItemsMedian
+        number permanentRevenueCentsMean
+        number permanentRevenueCentsMedian
     }
 
     syncLog {
@@ -135,4 +156,7 @@ erDiagram
   *taken* like any other number, nothing more.
 - `permanentNumbers` is unique on `(sellerNumberVariation, permanentNumberNumber)`; that index,
   not a check in code, makes the register import idempotent. `permanentNumberHolders`,
-  `permanentNumbers` and `syncLog` are superuser-only on all five rules.
+  `permanentNumbers`, `permanentNumberMarkets`, `marketStats` and `syncLog` are superuser-only
+  on all five rules.
+- `permanentNumberMarkets` keeps raw per-market figures (rolling four per number, kept by the
+  push); averages, medians and the trend are computed on read — no aggregate is stored twice.
