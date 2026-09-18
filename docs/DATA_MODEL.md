@@ -118,7 +118,7 @@ erDiagram
 
     syncLog {
         select direction "out | in"
-        select kind "export-assignment | export-events | export-ack | permanent-numbers-import | permanent-numbers-materialise | permanent-numbers-review"
+        select kind "export-assignment | export-events | export-ack | permanent-numbers-import | permanent-numbers-materialise | permanent-numbers-statistics"
         relation event FK "optional"
         text client "superuser or apiClients email"
         text checksum "sha256 of the export"
