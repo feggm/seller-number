@@ -112,14 +112,20 @@ holder: there are no real Dauernummern at Anziehbar, but the concept is the same
 ### 10. permanentNumberMarkets
 
 `permanentNumber` (relation, required, cascade delete), `market` (text `YYYY-Mon`, required),
-`event` (relation, optional — old markets predate the events collection), `itemsSold` (number),
-`revenueCents` (number)
+`event` (relation, optional — old markets predate the events collection), `holder` (relation →
+permanentNumberHolders, optional), `firstNameHash` / `lastNameHash` (text, 64 hex — the person
+who sold under the number at that market), `holderMatch` (select: `holder` | `nameChange` |
+`mismatch`), `itemsSold` (number), `revenueCents` (number)
 
 One row per (Dauernummer, market): the raw figures, not aggregates — mean, median and trend are
 computed on read, so nothing drifts. Pushed by the cash-desk side after each market
-(KKM-legacy plan §1.10), which keeps the newest four rows per number and deletes older ones;
-a paused market simply has no row. Unique on `(permanentNumber, market)`, so a repeated push
-overwrites in place. Numbers and cents only. All API rules `null`.
+(KKM-legacy plan §1.10). A number changes hands, its statistics must not: the push resolves
+the row's name hashes against the register — `holder` set and `holderMatch = holder` when both
+hashes equal the current holder's, `nameChange` when only the last name differs (a marriage,
+most likely; the operator confirms by editing the holder and the next push matches),
+`mismatch` when the row belongs to someone else. Only holder-matched rows count towards the
+window and the flag; the push keeps the newest four per number and holder. A paused market has
+no row. Unique on `(permanentNumber, market)`. All API rules `null`.
 
 ### 11. marketStats
 
@@ -133,7 +139,20 @@ The baselines a Dauernummer is measured against, one row per (category, market),
 market. Pushed together with `permanentNumberMarkets`. Unique on `(eventCategory, market)`. All
 API rules `null`.
 
-### 12. syncLog
+### 12. marketTopSellers
+
+`eventCategory` (relation, required), `market` (text `YYYY-Mon`, required), `event` (relation,
+optional), `number`, `rankRevenue`, `rankItems`, `itemsSold`, `revenueCents` (numbers),
+`firstNameHash` / `lastNameHash` (text, 64 hex)
+
+The strongest sellers *without* a Dauernummer per market — the top 20 by revenue and the top
+20 by items, union — pushed with the statistics. Dauernummer candidates are found by grouping
+these rows by hash pair across markets (a seller gets a new number every market; the hashes
+recognise the person). For a market with an event the number resolves to the registration
+through the event's pools, so the report can show the name to a superuser. Kept for every
+market. Unique on `(eventCategory, market, number)`. All API rules `null`.
+
+### 13. syncLog
 
 `direction` (select: `out` | `in`), `kind` (select: `export-assignment` | `export-events` |
 `export-ack` | `permanent-numbers-import` | `permanent-numbers-materialise` | `permanent-numbers-statistics`), `event`
