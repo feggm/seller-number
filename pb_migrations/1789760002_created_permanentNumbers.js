@@ -106,10 +106,11 @@ migrate(
           system: false,
           type: 'date',
         },
-        // Snapshot of the last review export from the sales archive (kkm-db-v2-datamodel.md
-        // "Feeding the review flag"): windowed averages over the last four active markets and
-        // the flag they produced. Averages only, by design — no single market judges a number.
-        // Money in cents, like everywhere on the cash-desk side.
+        // Snapshot of the last review export from the cash-desk side (kkm-db-v2-datamodel.md
+        // "Feeding the review flag"): the last market's figures, the windowed averages over the
+        // last four active markets, and the flag the window produced. The flag rests on the
+        // averages only; the last* pair is for the operator's eye. Money in cents, like
+        // everywhere on the cash-desk side.
         {
           hidden: false,
           id: 'bool_pn_reviewFlag',
@@ -149,6 +150,30 @@ migrate(
           min: 0,
           name: 'avgItemsSold',
           onlyInt: false,
+          presentable: false,
+          required: false,
+          system: false,
+          type: 'number',
+        },
+        {
+          hidden: false,
+          id: 'number_pn_lastItemsSold',
+          max: null,
+          min: 0,
+          name: 'lastItemsSold',
+          onlyInt: true,
+          presentable: false,
+          required: false,
+          system: false,
+          type: 'number',
+        },
+        {
+          hidden: false,
+          id: 'number_pn_lastRevenueCents',
+          max: null,
+          min: 0,
+          name: 'lastRevenueCents',
+          onlyInt: true,
           presentable: false,
           required: false,
           system: false,

@@ -102,10 +102,12 @@ identity the register keeps across markets. All API rules `null`.
 the number outlive a market), `permanentNumberNumber` (number, required), `holder` (relation →
 permanentNumberHolders, required), `status` (select: `aktiv` | `pausiert` | `freigegeben` |
 `gesperrt`), `heldSince` (date), `releasedAt` (date), and the snapshot of the last review
-export from the sales archive: `reviewFlag` (bool), `reviewedAt` (date), `reviewMarkets`
-(number — active markets in the window), `avgItemsSold` (number), `avgRevenueCents` (number).
-Windowed averages only, no single-market figures: the archive's review export is shaped that
-way on purpose (`kkm-db-v2-datamodel.md`, "Feeding the review flag"). Nothing writes these yet.
+export from the cash-desk side: `reviewFlag` (bool), `reviewedAt` (date), `reviewMarkets`
+(number — active markets in the window), `lastItemsSold` / `lastRevenueCents` (the last
+market), `avgItemsSold` / `avgRevenueCents` (the four-market window). The flag rests on the
+averages, never on a single market (`kkm-db-v2-datamodel.md`, "Feeding the review flag");
+the last* pair is there for the operator to see. Cents throughout. Nothing writes these yet —
+the review sync after a market is the cash-desk side's job (KKM-legacy plan §1.10).
 
 Unique index on `(sellerNumberVariation, permanentNumberNumber)` — the import is idempotent
 because of it. All API rules `null`. AZB staff numbers live here too, with `isStaff` on the

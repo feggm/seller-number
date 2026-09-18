@@ -89,8 +89,10 @@ erDiagram
         bool reviewFlag "last review export"
         date reviewedAt
         number reviewMarkets "active markets in the window"
-        number avgItemsSold
-        number avgRevenueCents
+        number lastItemsSold "last market"
+        number lastRevenueCents "last market"
+        number avgItemsSold "four-market window"
+        number avgRevenueCents "four-market window"
     }
 
     syncLog {
