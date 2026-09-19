@@ -369,21 +369,21 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
     error.status = 404
     throw error
   }
-  const poolByVariation = {}
+  // An event carries several pools per variation — the ranges are split so they can open at
+  // different times — so the pool of a number is the one whose range holds it.
+  const poolsByVariation = {}
   const numbersByPool = {}
   for (const pool of pools) {
     const variationId = pool.get('sellerNumberVariation')
-    if (poolByVariation[variationId]) {
-      throw validationError(`event has two pools for variation ${variationId}; materialise cannot pick one`)
-    }
-    poolByVariation[variationId] = pool
+    if (!poolsByVariation[variationId]) poolsByVariation[variationId] = []
+    poolsByVariation[variationId].push(pool)
     try {
       numbersByPool[pool.get('id')] = resolveNumbers(JSON.parse(pool.get('numbersAsJsonArray') || '[]'))
     } catch (error) {
       throw validationError(`pool ${pool.get('id')}: numbersAsJsonArray is not valid JSON`)
     }
   }
-  const variationIds = Object.keys(poolByVariation)
+  const variationIds = Object.keys(poolsByVariation)
   const variationsById = {}
   for (const variation of app.findRecordsByFilter('sellerNumberVariations', orFilterForIds('id', variationIds), '', 0, 0) || []) {
     variationsById[variation.get('id')] = variation
@@ -409,7 +409,6 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
     for (const row of registerRows) {
       const number = row.get('permanentNumberNumber')
       const variationId = row.get('sellerNumberVariation')
-      const pool = poolByVariation[variationId]
       const variation = variationsById[variationId]
       const base = {
         number,
@@ -433,17 +432,33 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
       const warning = holderWarning(holder)
       if (warning) base.warning = warning
 
-      if (!numbersByPool[pool.get('id')].includes(number)) {
+      const candidates = poolsByVariation[variationId].filter((p) => numbersByPool[p.get('id')].includes(number))
+      if (candidates.length === 0) {
         counts.notInPool += 1
         results.push(
           Object.assign(base, {
             result: 'notInPool',
-            poolId: pool.get('id'),
-            reason: 'number is outside the pool\'s declared range; extend numbersAsJsonArray first',
+            poolIds: poolsByVariation[variationId].map((p) => p.get('id')),
+            reason:
+              'number lies in none of the variation\'s pools for this event; add it to one first — a pool ' +
+              'whose obtainableTo has passed keeps it off the public path',
           })
         )
         continue
       }
+      if (candidates.length > 1) {
+        counts.skipped += 1
+        results.push(
+          Object.assign(base, {
+            result: 'skipped',
+            poolIds: candidates.map((p) => p.get('id')),
+            reason: 'number lies in more than one pool of this variation; fix the pools first',
+          })
+        )
+        continue
+      }
+      const pool = candidates[0]
+      base.poolId = pool.get('id')
 
       const existingRows =
         txApp.findRecordsByFilter(

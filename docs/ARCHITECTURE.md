@@ -364,9 +364,10 @@ the identical path and rolls back, so its report is exactly what the real run do
   `manualConfirmation` for a WhatsApp holder and `noContactOnFile` when not even a phone number
   is known; the operator handles those by hand
 
-For every `aktiv` register row whose variation has a pool in the event: the number must lie in
-the pool's declared range (`notInPool` otherwise — extend `numbersAsJsonArray` first, and mind
-the `{"from":0}` pitfall); then, at `(pool, number)`: a completed registration by this holder →
+For every `aktiv` register row whose variation has a pool in the event: the pool is the one of
+the variation's pools whose range holds the number (`notInPool` when none does — add the number
+to a pool first; a pool whose `obtainableTo` has passed keeps it off the public path — and
+`skipped` when more than one does; mind the `{"from":0}` pitfall); then, at `(pool, number)`: a completed registration by this holder →
 `already`; by anyone else → `conflict`, never overwritten; a dead hold (no `sellerDetails`) is
 deleted; otherwise a `sellerDetails` row (name/mail/phone/`isStaff` from the holder,
 `permanentNumberHolder` set) and a `sellerNumbers` row are created. No mail is sent. One
