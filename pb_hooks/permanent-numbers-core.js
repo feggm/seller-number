@@ -225,10 +225,14 @@ const importRegister = (app, { holders, dryRun }) => {
       const { key, firstHash, lastHash, contact } = holderKey(row)
       if (holdersThisRun[key]) return holdersThisRun[key]
       const contactField = row.contactChannel === 'whatsapp' ? 'holderPhone' : 'holderEmail'
+      // An empty bound param does not match an empty column, so a WhatsApp holder without a
+      // number is compared with the literal instead — otherwise a second import would report
+      // a conflict against the very row it created.
+      const contactClause = contact ? `${contactField} = {:contact}` : `${contactField} = ""`
       const existing =
         txApp.findRecordsByFilter(
           'permanentNumberHolders',
-          `holderContactChannel = {:channel} && ${contactField} = {:contact} && holderFirstNameHash = {:firstHash} && holderLastNameHash = {:lastHash}`,
+          `holderContactChannel = {:channel} && ${contactClause} && holderFirstNameHash = {:firstHash} && holderLastNameHash = {:lastHash}`,
           '',
           1,
           0,
