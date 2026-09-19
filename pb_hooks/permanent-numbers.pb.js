@@ -1,6 +1,6 @@
 // Dauernummer register routes — superuser only, no public surface.
 //
-//   POST /api/seller-number/permanent-numbers/import       { dryRun, holders: [...] }
+//   POST /api/seller-number/permanent-numbers/import       { dryRun, holders: [{number, variation, firstName, lastName, email?, phone?, contactChannel?, isStaff?, heldSince?}] }
 //   POST /api/seller-number/permanent-numbers/materialise  { eventId, source: "register", dryRun }
 //
 // Both run the real write path inside one transaction and roll it back on dryRun, so the dry
@@ -118,15 +118,18 @@ routerAdd('POST', '/api/seller-number/permanent-numbers/materialise', (e) => {
 })
 
 // Keep the holder name hashes current on every save, admin UI included — the hashes are the
-// join key the v2 status flow will use, and a stale one is worse than none.
+// join key the v2 status flow will use, and a stale one is worse than none. The contact rule
+// (address on the e-mail channel, phone on WhatsApp) is checked in the same place.
 onRecordCreate((e) => {
-  const { applyHolderHashes } = require(`${__hooks}/permanent-numbers-core.js`)
+  const { applyHolderHashes, applyHolderContact } = require(`${__hooks}/permanent-numbers-core.js`)
+  applyHolderContact(e.record)
   applyHolderHashes(e.record)
   e.next()
 }, 'permanentNumberHolders')
 
 onRecordUpdate((e) => {
-  const { applyHolderHashes } = require(`${__hooks}/permanent-numbers-core.js`)
+  const { applyHolderHashes, applyHolderContact } = require(`${__hooks}/permanent-numbers-core.js`)
+  applyHolderContact(e.record)
   applyHolderHashes(e.record)
   e.next()
 }, 'permanentNumberHolders')

@@ -64,7 +64,7 @@ erDiagram
     sellerDetails {
         text sellerFirstName "required"
         text sellerLastName "required"
-        email sellerEmail "required"
+        email sellerEmail "required by the registration route"
         text sellerPhone
         text ipAddress
         text deviceUuid
@@ -75,8 +75,9 @@ erDiagram
     permanentNumberHolders {
         text holderFirstName "required"
         text holderLastName "required"
-        email holderEmail "required"
-        text holderPhone
+        email holderEmail "required on the email channel"
+        text holderPhone "expected on the whatsapp channel"
+        select holderContactChannel "email | whatsapp"
         text holderFirstNameHash "sha256 of normalised name"
         text holderLastNameHash "sha256 of normalised name"
         bool isStaff

@@ -64,7 +64,8 @@ source of the `babynr` column in the exports — see `export-core.js`. There is 
 ### 6. sellerDetails (`pbc_418131918`)
 
 `sellerFirstName` (text, required), `sellerLastName` (text, required),
-`sellerEmail` (email, required), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text),
+`sellerEmail` (email — required by the registration route, optional at schema level so the
+register can materialise a WhatsApp-only holder), `sellerPhone` (text), `ipAddress` (text), `deviceUuid` (text),
 `isStaff` (bool — the `ma` column of the exports; set by hand in the admin UI),
 `permanentNumberHolder` (relation → permanentNumberHolders, optional — set only on rows the
 Dauernummer register materialised; this is what turns `dnr` on in the exports)
@@ -89,8 +90,10 @@ copy; the connection count exists only in Go process memory and is otherwise unr
 
 ### 8. permanentNumberHolders
 
-`holderFirstName` / `holderLastName` (text, required), `holderEmail` (email, required),
-`holderPhone` (text), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
+`holderFirstName` / `holderLastName` (text, required), `holderEmail` (email), `holderPhone`
+(text), `holderContactChannel` (select: `email` | `whatsapp`, required — the address is required on
+the e-mail channel, enforced by the record hook; a WhatsApp holder without a phone number is
+kept and reported as `noContactOnFile`), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
 the normalised name, kept current by a record hook), `isStaff` (bool), `holderNote` (text)
 
 The durable person behind a Dauernummer. `sellerDetails` is a per-event artefact; this is the
@@ -337,13 +340,16 @@ consumer's commit is, and this is how PocketBase learns about it. The only route
 ### POST /api/seller-number/permanent-numbers/import
 
 - **Auth**: superuser only
-- **Input**: `{ dryRun, holders: [{ number, variation, firstName, lastName, email, phone?,
-  isStaff?, heldSince? }] }` (≤ 1000 rows; `variation` is a `sellerNumberVariations` id)
+- **Input**: `{ dryRun, holders: [{ number, variation, firstName, lastName, email?, phone?,
+  contactChannel?, isStaff?, heldSince? }] }` (≤ 1000 rows; `variation` is a
+  `sellerNumberVariations` id; `contactChannel` defaults to `email`, which requires `email`;
+  `whatsapp` marks a holder whose confirmation the operator handles by hand — `phone` should be
+  given but may be missing)
 - **Output**: `{ dryRun, counts: { created, already, conflict, holdersCreated, holdersReused },
   results: [{ number, variation, result, ... }] }`
 
-Loads the Dauernummer register: reuses the holder whose email and name hashes match, else
-creates one; then `created` (new `permanentNumbers` row, status `aktiv`), `already` (same
+Loads the Dauernummer register: reuses the holder whose contact (email, or phone on WhatsApp)
+and name hashes match, else creates one; then `created` (new `permanentNumbers` row, status `aktiv`), `already` (same
 holder) or `conflict` (a different holder has the number — reported, never overwritten). A
 holder is created no earlier than the number that needs it. One transaction; `dryRun` walks
 the identical path and rolls back, so its report is exactly what the real run does.
@@ -354,7 +360,9 @@ the identical path and rolls back, so its report is exactly what the real run do
 - **Input**: `{ eventId, source: "register", dryRun }` — `source: "confirmations"` answers 501
   until the confirmation cycle exists
 - **Output**: `{ dryRun, event, registerRows, counts: { created, already, conflict, notInPool,
-  skipped, deadHoldsReplaced }, results: [...] }`
+  skipped, deadHoldsReplaced }, results: [{ ..., contactChannel, warning? }] }` — `warning` is
+  `manualConfirmation` for a WhatsApp holder and `noContactOnFile` when not even a phone number
+  is known; the operator handles those by hand
 
 For every `aktiv` register row whose variation has a pool in the event: the number must lie in
 the pool's declared range (`notInPool` otherwise — extend `numbersAsJsonArray` first, and mind
