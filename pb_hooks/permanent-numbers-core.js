@@ -23,17 +23,25 @@ const MAX_NAME_LENGTH = 100
 const NUMBER_RE = /^[0-9]{1,6}$/
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-// kkm-db-v2-datamodel.md §"Namens-Hashes": trim, lowercase, umlauts transliterated, punctuation
-// and whitespace dropped. The hash is a join key across systems, so this must not drift.
+// kkm-db-v2-datamodel.md §"Namens-Hashes": lowercase, umlauts transliterated, NFD with the
+// combining marks dropped (José → jose), then everything outside [a-z0-9] removed — whitespace
+// and punctuation included. The hash is a join key across systems, so this must not drift:
+// KKM-legacy's backfill_statistics.py computes the same, and the test vectors live in the KKM
+// plan §1.1. The NFC step first only matters for names that arrive decomposed (u + U+0308),
+// which the umlaut replacement would otherwise miss.
 const normaliseName = (value) =>
   String(value || '')
-    .trim()
+    .normalize('NFC')
     .toLowerCase()
     .replace(/ä/g, 'ae')
     .replace(/ö/g, 'oe')
     .replace(/ü/g, 'ue')
     .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '')
+
+const CONTACT_CHANNELS = ['email', 'whatsapp']
 
 const sha256Hex = (text) => $security.sha256(text)
 
@@ -45,6 +53,20 @@ const nameHash = (value) => sha256Hex(normaliseName(value))
 const applyHolderHashes = (record) => {
   record.set('holderFirstNameHash', nameHash(record.get('holderFirstName')))
   record.set('holderLastNameHash', nameHash(record.get('holderLastName')))
+}
+
+// The channel rule, enforced where admin-UI edits arrive too: an e-mail holder needs an
+// address, a WhatsApp holder a phone number. An unset channel is e-mail — the default that
+// existed before the field did.
+const applyHolderContact = (record) => {
+  const channel = record.get('holderContactChannel') || 'email'
+  record.set('holderContactChannel', channel)
+  if (channel === 'email' && !String(record.get('holderEmail') || '').trim()) {
+    throw new BadRequestError('holderEmail is required unless holderContactChannel is "whatsapp"')
+  }
+  if (channel === 'whatsapp' && !String(record.get('holderPhone') || '').trim()) {
+    throw new BadRequestError('holderPhone is required when holderContactChannel is "whatsapp"')
+  }
 }
 
 // A dry run walks the real write path inside a transaction and then rolls it back by throwing;
@@ -100,15 +122,26 @@ const cleanHolderRow = (row, index, variationsById) => {
     throw validationError(`${where}.lastName: required, at most ${MAX_NAME_LENGTH} characters`)
   }
 
+  const contactChannel = String(row.contactChannel || 'email').trim()
+  if (!CONTACT_CHANNELS.includes(contactChannel)) {
+    throw validationError(`${where}.contactChannel: one of ${CONTACT_CHANNELS.join(', ')}`)
+  }
+
   const email = String(row.email || '')
     .trim()
     .toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw validationError(`${where}.email: required, must look like an address`)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw validationError(`${where}.email: must look like an address`)
+  }
+  if (contactChannel === 'email' && !email) {
+    throw validationError(`${where}.email: required unless contactChannel is "whatsapp"`)
   }
 
   const phone = String(row.phone || '').trim()
   if (phone.length > 50) throw validationError(`${where}.phone: at most 50 characters`)
+  if (contactChannel === 'whatsapp' && !phone) {
+    throw validationError(`${where}.phone: required when contactChannel is "whatsapp"`)
+  }
 
   const heldSince = row.heldSince === undefined || row.heldSince === null || row.heldSince === ''
     ? ''
@@ -124,6 +157,7 @@ const cleanHolderRow = (row, index, variationsById) => {
     lastName,
     email,
     phone,
+    contactChannel,
     isStaff: row.isStaff === true,
     heldSince,
   }
@@ -172,25 +206,29 @@ const importRegister = (app, { holders, dryRun }) => {
     // Holders created in this run, keyed like the lookup, so two numbers of one person share one row.
     const holdersThisRun = {}
 
+    // A person is the same person when name hashes and contact match — the address on the
+    // e-mail channel, the phone number on WhatsApp, where there is no address to compare.
     const holderKey = (row) => {
       const firstHash = nameHash(row.firstName)
       const lastHash = nameHash(row.lastName)
-      return { key: `${row.email}|${firstHash}|${lastHash}`, firstHash, lastHash }
+      const contact = row.contactChannel === 'whatsapp' ? row.phone : row.email
+      return { key: `${row.contactChannel}|${contact}|${firstHash}|${lastHash}`, firstHash, lastHash, contact }
     }
 
     // Lookup only — a holder is created no earlier than the number that needs it, so a
     // conflicting row leaves no orphan person behind.
     const findHolder = (row) => {
-      const { key, firstHash, lastHash } = holderKey(row)
+      const { key, firstHash, lastHash, contact } = holderKey(row)
       if (holdersThisRun[key]) return holdersThisRun[key]
+      const contactField = row.contactChannel === 'whatsapp' ? 'holderPhone' : 'holderEmail'
       const existing =
         txApp.findRecordsByFilter(
           'permanentNumberHolders',
-          'holderEmail = {:email} && holderFirstNameHash = {:firstHash} && holderLastNameHash = {:lastHash}',
+          `holderContactChannel = {:channel} && ${contactField} = {:contact} && holderFirstNameHash = {:firstHash} && holderLastNameHash = {:lastHash}`,
           '',
           1,
           0,
-          { email: row.email, firstHash, lastHash }
+          { channel: row.contactChannel, contact, firstHash, lastHash }
         ) || []
       if (existing.length > 0) holdersThisRun[key] = existing[0]
       return existing.length > 0 ? existing[0] : null
@@ -202,6 +240,7 @@ const importRegister = (app, { holders, dryRun }) => {
       holder.set('holderLastName', row.lastName)
       holder.set('holderEmail', row.email)
       holder.set('holderPhone', row.phone)
+      holder.set('holderContactChannel', row.contactChannel)
       holder.set('isStaff', row.isStaff)
       applyHolderHashes(holder)
       txApp.save(holder)
@@ -380,6 +419,9 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
         results.push(Object.assign(base, { result: 'skipped', reason: 'holder record missing' }))
         continue
       }
+      // Visible in the dry-run report: a WhatsApp holder gets no confirmation mail, the
+      // operator confirms by hand (§1.8).
+      base.contactChannel = holder.get('holderContactChannel') || 'email'
 
       if (!numbersByPool[pool.get('id')].includes(number)) {
         counts.notInPool += 1
@@ -456,7 +498,7 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
       const details = new Record(detailsCollection)
       details.set('sellerFirstName', holder.get('holderFirstName'))
       details.set('sellerLastName', holder.get('holderLastName'))
-      details.set('sellerEmail', holder.get('holderEmail'))
+      details.set('sellerEmail', holder.get('holderEmail') || '')
       details.set('sellerPhone', holder.get('holderPhone') || '')
       details.set('ipAddress', '')
       details.set('deviceUuid', '')
@@ -499,6 +541,7 @@ module.exports = {
   nameHash,
   sha256Hex,
   applyHolderHashes,
+  applyHolderContact,
   importRegister,
   materialiseRegister,
 }
