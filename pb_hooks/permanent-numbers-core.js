@@ -56,17 +56,22 @@ const applyHolderHashes = (record) => {
 }
 
 // The channel rule, enforced where admin-UI edits arrive too: an e-mail holder needs an
-// address, a WhatsApp holder a phone number. An unset channel is e-mail — the default that
-// existed before the field did.
+// address. A WhatsApp holder should have a phone number but may lack one (reached through the
+// team) — that is a warning for the report, not a refusal. An unset channel is e-mail, the
+// default that existed before the field did.
 const applyHolderContact = (record) => {
   const channel = record.get('holderContactChannel') || 'email'
   record.set('holderContactChannel', channel)
   if (channel === 'email' && !String(record.get('holderEmail') || '').trim()) {
     throw new BadRequestError('holderEmail is required unless holderContactChannel is "whatsapp"')
   }
-  if (channel === 'whatsapp' && !String(record.get('holderPhone') || '').trim()) {
-    throw new BadRequestError('holderPhone is required when holderContactChannel is "whatsapp"')
-  }
+}
+
+// What the report should warn about for a holder: nothing, "manual confirmation" for a
+// WhatsApp holder, "no contact on file" when not even a phone number is known.
+const holderWarning = (holder) => {
+  if ((holder.get('holderContactChannel') || 'email') !== 'whatsapp') return ''
+  return String(holder.get('holderPhone') || '').trim() ? 'manualConfirmation' : 'noContactOnFile'
 }
 
 // A dry run walks the real write path inside a transaction and then rolls it back by throwing;
@@ -137,11 +142,10 @@ const cleanHolderRow = (row, index, variationsById) => {
     throw validationError(`${where}.email: required unless contactChannel is "whatsapp"`)
   }
 
+  // A WhatsApp holder may arrive without a number: three AZB staff are reached indirectly
+  // through the team, and the register keeps them with a warning rather than refusing them.
   const phone = String(row.phone || '').trim()
   if (phone.length > 50) throw validationError(`${where}.phone: at most 50 characters`)
-  if (contactChannel === 'whatsapp' && !phone) {
-    throw validationError(`${where}.phone: required when contactChannel is "whatsapp"`)
-  }
 
   const heldSince = row.heldSince === undefined || row.heldSince === null || row.heldSince === ''
     ? ''
@@ -420,8 +424,10 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
         continue
       }
       // Visible in the dry-run report: a WhatsApp holder gets no confirmation mail, the
-      // operator confirms by hand (§1.8).
+      // operator confirms by hand (§1.8); without a number the team has to be asked.
       base.contactChannel = holder.get('holderContactChannel') || 'email'
+      const warning = holderWarning(holder)
+      if (warning) base.warning = warning
 
       if (!numbersByPool[pool.get('id')].includes(number)) {
         counts.notInPool += 1
@@ -542,6 +548,7 @@ module.exports = {
   sha256Hex,
   applyHolderHashes,
   applyHolderContact,
+  holderWarning,
   importRegister,
   materialiseRegister,
 }

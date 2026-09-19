@@ -76,7 +76,7 @@ erDiagram
         text holderFirstName "required"
         text holderLastName "required"
         email holderEmail "required on the email channel"
-        text holderPhone "required on the whatsapp channel"
+        text holderPhone "expected on the whatsapp channel"
         select holderContactChannel "email | whatsapp"
         text holderFirstNameHash "sha256 of normalised name"
         text holderLastNameHash "sha256 of normalised name"

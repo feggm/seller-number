@@ -91,8 +91,9 @@ copy; the connection count exists only in Go process memory and is otherwise unr
 ### 8. permanentNumberHolders
 
 `holderFirstName` / `holderLastName` (text, required), `holderEmail` (email), `holderPhone`
-(text), `holderContactChannel` (select: `email` | `whatsapp`, required — the address is required
-on the e-mail channel, the phone on WhatsApp; enforced by the record hook), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
+(text), `holderContactChannel` (select: `email` | `whatsapp`, required — the address is required on
+the e-mail channel, enforced by the record hook; a WhatsApp holder without a phone number is
+kept and reported as `noContactOnFile`), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
 the normalised name, kept current by a record hook), `isStaff` (bool), `holderNote` (text)
 
 The durable person behind a Dauernummer. `sellerDetails` is a per-event artefact; this is the
@@ -341,9 +342,9 @@ consumer's commit is, and this is how PocketBase learns about it. The only route
 - **Auth**: superuser only
 - **Input**: `{ dryRun, holders: [{ number, variation, firstName, lastName, email?, phone?,
   contactChannel?, isStaff?, heldSince? }] }` (≤ 1000 rows; `variation` is a
-  `sellerNumberVariations` id; `contactChannel` defaults to `email`, which requires `email` —
-  `whatsapp` requires `phone` instead and marks a holder whose confirmation the operator handles
-  by hand)
+  `sellerNumberVariations` id; `contactChannel` defaults to `email`, which requires `email`;
+  `whatsapp` marks a holder whose confirmation the operator handles by hand — `phone` should be
+  given but may be missing)
 - **Output**: `{ dryRun, counts: { created, already, conflict, holdersCreated, holdersReused },
   results: [{ number, variation, result, ... }] }`
 
@@ -359,7 +360,9 @@ the identical path and rolls back, so its report is exactly what the real run do
 - **Input**: `{ eventId, source: "register", dryRun }` — `source: "confirmations"` answers 501
   until the confirmation cycle exists
 - **Output**: `{ dryRun, event, registerRows, counts: { created, already, conflict, notInPool,
-  skipped, deadHoldsReplaced }, results: [...] }`
+  skipped, deadHoldsReplaced }, results: [{ ..., contactChannel, warning? }] }` — `warning` is
+  `manualConfirmation` for a WhatsApp holder and `noContactOnFile` when not even a phone number
+  is known; the operator handles those by hand
 
 For every `aktiv` register row whose variation has a pool in the event: the number must lie in
 the pool's declared range (`notInPool` otherwise — extend `numbersAsJsonArray` first, and mind
