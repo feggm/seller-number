@@ -12,6 +12,14 @@ erDiagram
     sellerNumberVariations ||--o{ sellerNumberPools : "sellerNumberVariation"
     sellerNumberPools ||--o{ sellerNumbers : "sellerNumberPool"
     sellerDetails |o--o| sellerNumbers : "sellerDetails (optional)"
+    permanentNumberHolders ||--o{ permanentNumbers : "holder"
+    sellerNumberVariations ||--o{ permanentNumbers : "sellerNumberVariation"
+    permanentNumberHolders |o--o{ sellerDetails : "permanentNumberHolder (optional)"
+    events |o--o{ syncLog : "event (optional)"
+    permanentNumbers ||--o{ permanentNumberMarkets : "permanentNumber (cascade delete)"
+    eventCategories ||--o{ marketStats : "eventCategory"
+    permanentNumberHolders |o--o{ permanentNumberMarkets : "holder (optional)"
+    eventCategories ||--o{ marketTopSellers : "eventCategory"
 
     eventCategories {
         text eventCategoryName "required"
@@ -60,6 +68,84 @@ erDiagram
         text sellerPhone
         text ipAddress
         text deviceUuid
+        bool isStaff "ma column of the exports"
+        relation permanentNumberHolder FK "optional, set by materialise"
+    }
+
+    permanentNumberHolders {
+        text holderFirstName "required"
+        text holderLastName "required"
+        email holderEmail "required"
+        text holderPhone
+        text holderFirstNameHash "sha256 of normalised name"
+        text holderLastNameHash "sha256 of normalised name"
+        bool isStaff
+        text holderNote
+    }
+
+    permanentNumbers {
+        relation sellerNumberVariation FK "required - variation, not event"
+        number permanentNumberNumber "required"
+        relation holder FK "required"
+        select status "aktiv | pausiert | freigegeben | gesperrt"
+        date heldSince
+        date releasedAt
+        bool reviewFlag "advisory, from the last statistics sync"
+        date reviewedAt
+    }
+
+    permanentNumberMarkets {
+        relation permanentNumber FK "required, cascade delete"
+        text market "YYYY-Mon, required"
+        relation event FK "optional"
+        relation holder FK "optional, resolved from the hashes"
+        text firstNameHash "who sold under the number that market"
+        text lastNameHash
+        select holderMatch "holder | nameChange | mismatch"
+        number itemsSold
+        number revenueCents
+    }
+
+    marketTopSellers {
+        relation eventCategory FK "required"
+        text market "YYYY-Mon, required"
+        relation event FK "optional"
+        number number
+        number rankRevenue
+        number rankItems
+        number itemsSold
+        number revenueCents
+        text firstNameHash
+        text lastNameHash
+    }
+
+    marketStats {
+        relation eventCategory FK "required"
+        text market "YYYY-Mon, required"
+        relation event FK "optional"
+        number sellers
+        number itemsMean
+        number itemsMedian
+        number revenueCentsMean
+        number revenueCentsMedian
+        number permanentSellers
+        number permanentItemsMean
+        number permanentItemsMedian
+        number permanentRevenueCentsMean
+        number permanentRevenueCentsMedian
+    }
+
+    syncLog {
+        select direction "out | in"
+        select kind "export-assignment | export-events | export-ack | permanent-numbers-import | permanent-numbers-materialise | permanent-numbers-statistics"
+        relation event FK "optional"
+        text client "superuser or apiClients email"
+        text checksum "sha256 of the export"
+        number rowCount
+        bool dryRun
+        select status "ok | error"
+        json summary "counters only, never a name"
+        date finishedAt
     }
 
     statusSamples {
@@ -85,4 +171,15 @@ erDiagram
   cascade when its `eventCategory` is deleted, and swept by the `statusSamplesRetention` cron
   after 90 days.
 - `sellerNumberPools.listRule` and `sellerNumbers.listRule` are both `""` (public) — see
-  `docs/ARCHITECTURE.md` § public-status.
+  `docs/ARCHITECTURE.md` § public-status. A materialised Dauernummer is therefore visible as
+  *taken* like any other number, nothing more.
+- `permanentNumbers` is unique on `(sellerNumberVariation, permanentNumberNumber)`; that index,
+  not a check in code, makes the register import idempotent. `permanentNumberHolders`,
+  `permanentNumbers`, `permanentNumberMarkets`, `marketStats`, `marketTopSellers` and `syncLog`
+  are superuser-only on all five rules.
+- `permanentNumberMarkets` keeps raw per-market figures (rolling four per number, kept by the
+  push); averages, medians and the trend are computed on read — no aggregate is stored twice.
+- Name hashes (`permanentNumberHolders`, `permanentNumberMarkets`, `marketTopSellers`) all use
+  the one exchange normalisation in `permanent-numbers-core.js` (`normaliseName`): lowercase,
+  ä/ö/ü/ß transliterated, NFD with combining marks dropped, then everything outside `[a-z0-9]`
+  removed. The cash-desk side computes the same; the KKM-legacy plan carries the test vectors.

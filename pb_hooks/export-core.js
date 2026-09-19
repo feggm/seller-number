@@ -185,9 +185,8 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
       key: sellerNumber.get('id'),
       sellerDetailsId: detailsId,
       nr,
-      // Set only on rows the Dauernummer register materialised. The field arrives with the
-      // register; until then `get()` yields nothing and dnr stays false.
-      dnr: !!details.get('dauernummerHolder'),
+      // Set only on rows the Dauernummer register materialised (permanent-numbers-core.js).
+      dnr: !!details.get('permanentNumberHolder'),
       babynr: isBabyVariation(variation),
       // Deliberately never derived here: "first market for this seller" is a question about
       // fifteen years of history the cash-desk side holds (hash comparison per event category).

@@ -30,7 +30,7 @@ Exports with the following CSV columns:
 | Column | Description | Current Status |
 |--------|-------------|----------------|
 | `nr` | Seller number | ✅ Available |
-| `dnr` | Dauernummer (permanent number flag) | ⚠️ Empty until the Dauernummer register exists |
+| `dnr` | Dauernummer (permanent number flag) | `D` when `sellerDetails.permanentNumberHolder` is set — rows the Dauernummer register materialised |
 | `babynr` | Babynummer (baby number flag) | ✅ `B` when the number's variation is named like `/baby/i` |
 | `name` | Last name (Nachname) | ✅ Available |
 | `vorname` | First name (Vorname) | ✅ Available |
