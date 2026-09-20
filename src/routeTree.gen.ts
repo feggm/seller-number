@@ -11,6 +11,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerwaltungRouteImport } from './routes/verwaltung'
 import { Route as NoReservationRouteImport } from './routes/no-reservation'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ const VariationVariationIdSellerNumberSellerNumberRouteImport = createFileRoute(
   '/variation/$variationId/sellerNumber/$sellerNumber',
 )()
 
+const VerwaltungRoute = VerwaltungRouteImport.update({
+  id: '/verwaltung',
+  path: '/verwaltung',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NoReservationRoute = NoReservationRouteImport.update({
   id: '/no-reservation',
   path: '/no-reservation',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
+  '/verwaltung': typeof VerwaltungRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/success': typeof VariationVariationIdSellerNumberSellerNumberSuccessRoute
   '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
+  '/verwaltung': typeof VerwaltungRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/success': typeof VariationVariationIdSellerNumberSellerNumberSuccessRoute
   '/variation/$variationId/sellerNumber/$sellerNumber/conditions': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterConditionsRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/live': typeof LiveRoute
   '/no-reservation': typeof NoReservationRoute
+  '/verwaltung': typeof VerwaltungRoute
   '/variation/$variationId/sellerNumber/$sellerNumber': typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter': typeof VariationVariationIdSellerNumberSellerNumberWithSessionCounterRouteWithChildren
   '/variation/$variationId/sellerNumber/$sellerNumber/success': typeof VariationVariationIdSellerNumberSellerNumberSuccessRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/'
     | '/live'
     | '/no-reservation'
+    | '/verwaltung'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/success'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/'
     | '/live'
     | '/no-reservation'
+    | '/verwaltung'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/success'
     | '/variation/$variationId/sellerNumber/$sellerNumber/conditions'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/'
     | '/live'
     | '/no-reservation'
+    | '/verwaltung'
     | '/variation/$variationId/sellerNumber/$sellerNumber'
     | '/variation/$variationId/sellerNumber/$sellerNumber/_withSessionCounter'
     | '/variation/$variationId/sellerNumber/$sellerNumber/success'
@@ -140,11 +152,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LiveRoute: typeof LiveRoute
   NoReservationRoute: typeof NoReservationRoute
+  VerwaltungRoute: typeof VerwaltungRoute
   VariationVariationIdSellerNumberSellerNumberRoute: typeof VariationVariationIdSellerNumberSellerNumberRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verwaltung': {
+      id: '/verwaltung'
+      path: '/verwaltung'
+      fullPath: '/verwaltung'
+      preLoaderRoute: typeof VerwaltungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/no-reservation': {
       id: '/no-reservation'
       path: '/no-reservation'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LiveRoute: LiveRoute,
   NoReservationRoute: NoReservationRoute,
+  VerwaltungRoute: VerwaltungRoute,
   VariationVariationIdSellerNumberSellerNumberRoute:
     VariationVariationIdSellerNumberSellerNumberRouteWithChildren,
 }

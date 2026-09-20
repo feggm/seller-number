@@ -1,0 +1,160 @@
+import { queryClient } from '@/lib/queryClient'
+import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
+
+import { pb } from '../pocketbase'
+import { withErrorLogging } from '../withErrorLogging'
+
+/**
+ * Read side of the Dauernummer register (seller-number-integration.md §1.1, §1.7). Superuser
+ * only: the collections have no public rules, so these queries only run once useAdminAuth
+ * says there is a superuser. No module-level realtime subscription here — a subscription to a
+ * superuser-only collection is refused before login — the mutations invalidate instead.
+ */
+
+export const EventCategorySchema = z.object({
+  id: z.string(),
+  eventCategoryName: z.string(),
+})
+export type EventCategory = z.infer<typeof EventCategorySchema>
+
+export const VariationSchema = z.object({
+  id: z.string(),
+  sellerNumberVariationName: z.string(),
+  eventCategory: z.string(),
+})
+export type Variation = z.infer<typeof VariationSchema>
+
+export const ContactChannelSchema = z.enum(['email', 'whatsapp'])
+export type ContactChannel = z.infer<typeof ContactChannelSchema>
+
+export const HolderSchema = z.object({
+  id: z.string(),
+  holderFirstName: z.string(),
+  holderLastName: z.string(),
+  holderEmail: z.string(),
+  holderPhone: z.string(),
+  holderContactChannel: ContactChannelSchema.or(z.literal('')).transform(
+    (value) => value || 'email'
+  ),
+  isStaff: z.boolean(),
+  holderNote: z.string(),
+})
+export type Holder = z.infer<typeof HolderSchema>
+
+export const NumberStatusSchema = z.enum([
+  'aktiv',
+  'pausiert',
+  'freigegeben',
+  'gesperrt',
+])
+export type NumberStatus = z.infer<typeof NumberStatusSchema>
+
+export const PermanentNumberSchema = z.object({
+  id: z.string(),
+  sellerNumberVariation: z.string(),
+  permanentNumberNumber: z.number(),
+  holder: z.string(),
+  status: NumberStatusSchema,
+  heldSince: z.string(),
+  releasedAt: z.string(),
+  reviewFlag: z.boolean(),
+  reviewedAt: z.string(),
+  expand: z
+    .object({ holder: HolderSchema.optional() })
+    .optional(),
+})
+export type PermanentNumber = z.infer<typeof PermanentNumberSchema>
+
+export const EventSchema = z.object({
+  id: z.string(),
+  eventName: z.string(),
+  eventDate: z.string(),
+  eventCategory: z.string(),
+})
+export type Event = z.infer<typeof EventSchema>
+
+const fieldsOf = (schema: z.ZodObject<z.ZodRawShape>) =>
+  Object.keys(schema.shape)
+    .filter((key) => key !== 'expand')
+    .join(',')
+
+export const useEventCategoriesQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'eventCategories'],
+    queryFn: withErrorLogging(async function getAdminEventCategoriesQuery() {
+      return EventCategorySchema.array().parse(
+        await pb.collection('eventCategories').getFullList({
+          fields: fieldsOf(EventCategorySchema),
+          sort: 'eventCategoryName',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const useVariationsQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'variations'],
+    queryFn: withErrorLogging(async function getAdminVariationsQuery() {
+      return VariationSchema.array().parse(
+        await pb.collection('sellerNumberVariations').getFullList({
+          fields: fieldsOf(VariationSchema),
+          sort: 'sellerNumberVariationName',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const useHoldersQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'holders'],
+    queryFn: withErrorLogging(async function getAdminHoldersQuery() {
+      return HolderSchema.array().parse(
+        await pb.collection('permanentNumberHolders').getFullList({
+          fields: fieldsOf(HolderSchema),
+          sort: 'holderLastName,holderFirstName',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const usePermanentNumbersQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'permanentNumbers'],
+    queryFn: withErrorLogging(async function getAdminPermanentNumbersQuery() {
+      return PermanentNumberSchema.array().parse(
+        await pb.collection('permanentNumbers').getFullList({
+          expand: 'holder',
+          fields: `${fieldsOf(PermanentNumberSchema)},expand.holder.*`,
+          sort: 'permanentNumberNumber',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const useEventsQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'events'],
+    queryFn: withErrorLogging(async function getAdminEventsQuery() {
+      return EventSchema.array().parse(
+        await pb.collection('events').getFullList({
+          fields: fieldsOf(EventSchema),
+          sort: '-eventDate',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+/** After any register write: everything the page shows comes from these five lists. */
+export const invalidateRegister = () =>
+  queryClient.invalidateQueries({ queryKey: ['admin'] })

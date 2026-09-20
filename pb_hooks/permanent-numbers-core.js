@@ -403,8 +403,26 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
   return runMaybeDry(app, dryRun === true, (txApp) => {
     const detailsCollection = txApp.findCollectionByNameOrId('sellerDetails')
     const sellerNumbersCollection = txApp.findCollectionByNameOrId('sellerNumbers')
-    const counts = { created: 0, already: 0, conflict: 0, notInPool: 0, skipped: 0, deadHoldsReplaced: 0 }
+    const counts = { created: 0, already: 0, updated: 0, conflict: 0, notInPool: 0, skipped: 0, stale: 0, deadHoldsReplaced: 0 }
     const results = []
+
+    // What the register projects onto a sellerDetails row; the same fields the create path
+    // writes, so "already" means exactly "nothing to copy".
+    const projection = (h) => ({
+      sellerFirstName: h.get('holderFirstName'),
+      sellerLastName: h.get('holderLastName'),
+      sellerEmail: h.get('holderEmail') || '',
+      sellerPhone: h.get('holderPhone') || '',
+      isStaff: h.get('isStaff') === true,
+      permanentNumberHolder: h.get('id'),
+    })
+    const changedFields = (details, h) =>
+      Object.entries(projection(h))
+        .filter(([field, value]) => (details.get(field) || (field === 'isStaff' ? false : '')) !== value)
+        .map(([field]) => field)
+    // Numbers this run saw with an aktiv register row — everything else the register once
+    // materialised in this event is stale (paused, released, deleted) and reported below.
+    const activeByPool = {}
 
     for (const row of registerRows) {
       const number = row.get('permanentNumberNumber')
@@ -486,8 +504,18 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
         } catch (error) {
           details = null
         }
-        if (details && details.get('permanentNumberHolder') === holder.get('id')) {
-          conflict = { already: true, sellerNumberId: existing.get('id'), sellerDetailsId: detailsId }
+        if (details && details.get('permanentNumberHolder')) {
+          // Materialised by the register: keep the row in step with it. A holder change
+          // rehomes the number, an edited holder refreshes the copy, otherwise "already".
+          const fields = changedFields(details, holder)
+          conflict = {
+            already: fields.length === 0,
+            update: fields.length > 0 ? fields : null,
+            previousHolderId: details.get('permanentNumberHolder'),
+            sellerNumberId: existing.get('id'),
+            sellerDetailsId: detailsId,
+            details,
+          }
         } else {
           conflict = {
             already: false,
@@ -502,7 +530,26 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
 
       if (conflict && conflict.already) {
         counts.already += 1
+        activeByPool[`${pool.get('id')}:${number}`] = true
         results.push(Object.assign(base, { result: 'already', sellerNumberId: conflict.sellerNumberId, sellerDetailsId: conflict.sellerDetailsId }))
+        continue
+      }
+      if (conflict && conflict.update) {
+        const details = conflict.details
+        for (const [field, value] of Object.entries(projection(holder))) details.set(field, value)
+        txApp.save(details)
+        counts.updated += 1
+        activeByPool[`${pool.get('id')}:${number}`] = true
+        results.push(
+          Object.assign(base, {
+            result: 'updated',
+            sellerNumberId: conflict.sellerNumberId,
+            sellerDetailsId: conflict.sellerDetailsId,
+            changedFields: conflict.update,
+            previousHolderId: conflict.previousHolderId,
+            reason: conflict.previousHolderId === holder.get('id') ? 'holder data changed' : 'number rehomed to another holder',
+          })
+        )
         continue
       }
       if (conflict) {
@@ -540,6 +587,7 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
 
       counts.created += 1
       if (replacedDeadHold) counts.deadHoldsReplaced += 1
+      activeByPool[`${pool.get('id')}:${number}`] = true
       results.push(
         Object.assign(base, {
           result: 'created',
@@ -548,6 +596,38 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
           replacedDeadHold,
         })
       )
+    }
+
+    // Rows the register materialised earlier whose number has no aktiv register row any more
+    // (paused, released, deleted after materialisation). Reported, never freed here: releasing
+    // a number mid-market is the operator's call in the admin UI.
+    for (const pool of pools) {
+      const rows = txApp.findRecordsByFilter('sellerNumbers', 'sellerNumberPool = {:poolId}', '', 0, 0, { poolId: pool.get('id') }) || []
+      for (const existing of rows) {
+        const number = existing.get('sellerNumberNumber')
+        if (activeByPool[`${pool.get('id')}:${number}`] || !existing.get('sellerDetails')) continue
+        let details = null
+        try {
+          details = txApp.findRecordById('sellerDetails', existing.get('sellerDetails'))
+        } catch (error) {
+          details = null
+        }
+        if (!details || !details.get('permanentNumberHolder')) continue
+        counts.stale += 1
+        results.push({
+          number,
+          variation: pool.get('sellerNumberVariation'),
+          variationName: variationsById[pool.get('sellerNumberVariation')]
+            ? variationsById[pool.get('sellerNumberVariation')].get('sellerNumberVariationName')
+            : null,
+          poolId: pool.get('id'),
+          holderId: details.get('permanentNumberHolder'),
+          sellerNumberId: existing.get('id'),
+          sellerDetailsId: details.get('id'),
+          result: 'stale',
+          reason: 'materialised by the register, but the number has no aktiv register row any more; free it by hand if it should not sell',
+        })
+      }
     }
 
     return {
