@@ -48,15 +48,15 @@ export function NewNumberForm({
   const containing = numberValid
     ? poolsOfVariation.filter((p) => resolveNumbers(p.numbersAsJsonArray).includes(parsed))
     : []
-  const inOpenPool = containing.some((p) => !(p.obtainableTo !== '' && p.obtainableTo.slice(0, 10) < today))
+  const inPublicPool = containing.some((p) => !p.isPermanentPool)
   const poolCheck: { ok: boolean; text: string; level: 'ok' | 'warn' | 'error' } | null = !numberValid
     ? null
     : !referenceEvent || !pools.data
       ? null
       : containing.length === 0
         ? { ok: false, level: 'error', text: `Nr. ${String(parsed)} liegt in keinem Pool von „${referenceEvent.eventName}" (${formatDay(referenceEvent.eventDate)}) — erst den Pool anlegen oder erweitern.` }
-        : inOpenPool
-          ? { ok: true, level: 'warn', text: `Nr. ${String(parsed)} liegt im offenen Publikums-Pool: vor dem Kopieren in den ${registerTerm}n-Pool umziehen, sonst kann sie jeder buchen.` }
+        : inPublicPool
+          ? { ok: true, level: 'warn', text: `Nr. ${String(parsed)} liegt im Publikums-Pool: vor dem Kopieren in den ${registerTerm}n-Pool umziehen, sonst geht sie an einen normalen Verkäufer.` }
           : { ok: true, level: 'ok', text: `Nr. ${String(parsed)} liegt im ${registerTerm}n-Pool von „${referenceEvent.eventName}".` }
 
   const submit = async () => {

@@ -45,6 +45,9 @@ import { formatDay } from './helpers'
 type Row = {
   number: number
   variationName: string
+  /** The register's pool: only "Dauernummern in Event kopieren" writes into it. */
+  poolPermanent: boolean
+  /** Nobody can book from the pool any more (obtainableTo passed). */
   poolClosed: boolean
   sellerNumber?: SellerNumber
   registerNumber?: PermanentNumber
@@ -107,6 +110,7 @@ export function EventNumbers({
       rows.push({
         number,
         variationName: variationName(pool.sellerNumberVariation),
+        poolPermanent: pool.isPermanentPool,
         poolClosed: closed,
         sellerNumber: takenByKey.get(`${pool.id}:${String(number)}`),
         registerNumber: registerByKey.get(`${pool.sellerNumberVariation}:${String(number)}`),
@@ -128,9 +132,10 @@ export function EventNumbers({
   })
   const registered = rows.filter((r) => r.sellerNumber?.sellerDetails).length
   const held = rows.filter((r) => r.sellerNumber && !r.sellerNumber.sellerDetails).length
-  // A number nobody holds in a closed pool is not free — nobody can reserve it. The
-  // Dauernummern pools are closed on purpose, so their unassigned numbers are reserved range.
-  const unbookable = rows.filter((r) => !r.sellerNumber && r.poolClosed).length
+  // A number nobody holds in the register's pool is not free — it is reserved range without
+  // a holder. A free number in a public pool whose window has ended is still free, just no
+  // longer bookable.
+  const unbookable = rows.filter((r) => !r.sellerNumber && r.poolPermanent).length
   const free = rows.length - registered - held - unbookable
 
 
@@ -206,13 +211,17 @@ export function EventNumbers({
                     <TableCell className="font-mono font-semibold">{r.number}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {r.variationName}
-                      {r.poolClosed && <span className="ml-1" title="geschlossener Pool">🔒</span>}
+                      {r.poolPermanent && <span className="ml-1" title={`${registerTerm}n-Pool`}>🔒</span>}
                     </TableCell>
                     <TableCell className="text-sm">
                       {!s ? (
-                        r.poolClosed ? (
-                          <span className="text-muted-foreground" title={`${registerTerm} ohne Halter:in — im geschlossenen Pool, niemand kann sie buchen`}>
+                        r.poolPermanent ? (
+                          <span className="text-muted-foreground" title={`${registerTerm} ohne Halter:in — im ${registerTerm}n-Pool, niemand kann sie buchen`}>
                             {registerTerm} unbesetzt
+                          </span>
+                        ) : r.poolClosed ? (
+                          <span className="text-muted-foreground" title="Anmeldephase beendet, niemand kann sie mehr buchen">
+                            frei · Anmeldung beendet
                           </span>
                         ) : (
                           <span className="text-muted-foreground">frei</span>

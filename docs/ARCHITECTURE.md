@@ -50,7 +50,10 @@ source of the `babynr` column in the exports — see `export-core.js`. There is 
 
 `sellerNumberVariation` (relation, required), `event` (relation, required),
 `numbersAsJsonArray` (**text** holding a JSON string), `obtainableFrom` (date),
-`obtainableTo` (date)
+`obtainableTo` (date), `isPermanentPool` (bool — the register's pool: kept off the public path
+by an `obtainableTo` in the past, written only by `permanent-numbers/materialise`; the
+Verwaltung reads the flag, not the dates, to tell it from a public pool whose registration
+window has simply ended)
 
 > `numberFrom`/`numberTo` and the earlier `numbers` JSON field were removed by migrations.
 > The current field is `numbersAsJsonArray`, a **text** field that must be `JSON.parse`d.
@@ -382,7 +385,7 @@ the identical path and rolls back, so its report is exactly what the real run do
 
 For every `aktiv` register row whose variation has a pool in the event: the pool is the one of
 the variation's pools whose range holds the number (`notInPool` when none does — add the number
-to a pool first; a pool whose `obtainableTo` has passed keeps it off the public path — and
+to a pool first; a pool with `isPermanentPool` and an `obtainableTo` in the past keeps it off the public path — and
 `skipped` when more than one does; mind the `{"from":0}` pitfall); then, at `(pool, number)`: a
 row the register materialised earlier (`permanentNumberHolder` set) is kept in step — unchanged →
 `already`, holder or holder data changed → `updated` with `changedFields` (a holder change
