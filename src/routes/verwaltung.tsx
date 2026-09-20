@@ -1,5 +1,6 @@
 import { useAdminAuth } from '@/clients/admin/useAdminAuth'
 import {
+  type EventCategory,
   useEventCategoriesQuery,
   useEventsQuery,
   useHoldersQuery,
@@ -14,6 +15,7 @@ import { EventNumbers } from '@/components/verwaltung/EventNumbers'
 import { Field, Select } from '@/components/verwaltung/fields'
 import { MaterialiseCard } from '@/components/verwaltung/MaterialiseCard'
 import { NewNumberForm } from '@/components/verwaltung/NewNumberForm'
+import { PoolsOverview } from '@/components/verwaltung/PoolsOverview'
 import { RegisterTable } from '@/components/verwaltung/RegisterTable'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -29,10 +31,22 @@ export const Route = createFileRoute('/verwaltung')({
  */
 function Verwaltung() {
   const auth = useAdminAuth()
+  const categories = useEventCategoriesQuery(auth.isSuperuser)
+  const [categoryId, setCategoryId] = useState('')
+  const selectedCategory = categoryId || (categories.data?.at(0)?.id ?? '')
   return (
     <Card className="m-4 w-full max-w-6xl shadow-md">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle>Dauernummern-Verwaltung</CardTitle>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <CardTitle>Verkaufsnummer-Verwaltung</CardTitle>
+          {auth.isSuperuser && categories.data && (
+            <CategoryPicker
+              categories={categories.data}
+              value={selectedCategory}
+              onChange={setCategoryId}
+            />
+          )}
+        </div>
         {auth.isSuperuser && (
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">{auth.superuserEmail}</span>
@@ -42,8 +56,48 @@ function Verwaltung() {
           </div>
         )}
       </CardHeader>
-      <CardContent>{auth.isSuperuser ? <Register /> : <Login />}</CardContent>
+      <CardContent>
+        {auth.isSuperuser ? <Register categoryId={selectedCategory} /> : <Login />}
+      </CardContent>
     </Card>
+  )
+}
+
+/** Two categories today: a toggle reads faster than a dropdown. More than three and the
+ *  dropdown comes back by itself. */
+function CategoryPicker({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: EventCategory[]
+  value: string
+  onChange: (id: string) => void
+}) {
+  if (categories.length <= 3) {
+    return (
+      <div className="flex gap-1 rounded-md border p-1">
+        {categories.map((c) => (
+          <Button
+            key={c.id}
+            size="sm"
+            variant={value === c.id ? 'default' : 'ghost'}
+            onClick={() => { onChange(c.id); }}
+          >
+            {c.eventCategoryName}
+          </Button>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <Select value={value} onChange={(e) => { onChange(e.target.value); }} className="w-64">
+      {categories.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.eventCategoryName}
+        </option>
+      ))}
+    </Select>
   )
 }
 
@@ -80,14 +134,15 @@ function Login() {
   )
 }
 
-function Register() {
+type Section = 'register' | 'new' | 'materialise' | 'event' | 'pools'
+
+function Register({ categoryId }: { categoryId: string }) {
   const categories = useEventCategoriesQuery(true)
   const variations = useVariationsQuery(true)
   const holders = useHoldersQuery(true)
   const numbers = usePermanentNumbersQuery(true)
   const events = useEventsQuery(true)
-  const [categoryId, setCategoryId] = useState('')
-  const [section, setSection] = useState<'register' | 'new' | 'materialise' | 'event'>('register')
+  const [section, setSection] = useState<Section>('register')
 
   if (
     !categories.data ||
@@ -113,55 +168,25 @@ function Register() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-4">
-        {/* Two categories today: a toggle reads faster than a dropdown. More than three and
-            the dropdown comes back by itself. */}
-        {categories.data.length <= 3 ? (
-          <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-xs">Kategorie</span>
-            <div className="flex gap-1 rounded-md border p-1">
-              {categories.data.map((c) => (
-                <Button
-                  key={c.id}
-                  size="sm"
-                  variant={selectedCategory === c.id ? 'default' : 'ghost'}
-                  onClick={() => { setCategoryId(c.id); }}
-                >
-                  {c.eventCategoryName}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <Field label="Kategorie" className="w-64">
-            <Select value={selectedCategory} onChange={(e) => { setCategoryId(e.target.value); }}>
-              {categories.data.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.eventCategoryName}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
-        <div className="flex gap-2">
-          {(
-            [
-              ['register', `Register (${String(categoryNumbers.length)})`],
-              ['new', 'Nummer anlegen'],
-              ['materialise', 'In ein Event schreiben'],
-              ['event', 'Alle Nummern im Event'],
-            ] as const
-          ).map(([key, label]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={section === key ? 'default' : 'outline'}
-              onClick={() => { setSection(key); }}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ['register', `Dauernummern (${String(categoryNumbers.length)})`],
+            ['new', 'Dauernummer anlegen'],
+            ['materialise', 'Dauernummern in Event kopieren'],
+            ['event', 'Verkäuferliste'],
+            ['pools', 'Pools'],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={section === key ? 'default' : 'outline'}
+            onClick={() => { setSection(key); }}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
       {section === 'register' && (
@@ -177,11 +202,21 @@ function Register() {
           key={selectedCategory}
           variations={categoryVariations}
           holders={holders.data}
+          events={categoryEvents}
           defaultVariationId={standardVariation.id}
+          registerTerm={registerTerm}
         />
       )}
       {section === 'materialise' && (
-        <MaterialiseCard key={selectedCategory} events={categoryEvents} />
+        <MaterialiseCard key={selectedCategory} events={categoryEvents} registerTerm={registerTerm} />
+      )}
+      {section === 'pools' && (
+        <PoolsOverview
+          key={selectedCategory}
+          events={categoryEvents}
+          variations={categoryVariations}
+          registerTerm={registerTerm}
+        />
       )}
       {section === 'event' && (
         <EventNumbers

@@ -44,7 +44,7 @@ const ORDER: MaterialiseResult['result'][] = [
 
 /** Register → event: dry run first, always; the real run only behind the dialog and only
  *  after a dry run of the same event, so what gets written is what was just read. */
-export function MaterialiseCard({ events }: { events: Event[] }) {
+export function MaterialiseCard({ events, registerTerm }: { events: Event[]; registerTerm: string }) {
   const upcoming = events.filter((e) => e.eventDate >= new Date().toISOString().slice(0, 10))
   const [eventId, setEventId] = useState(
     upcoming.length > 0 ? upcoming[upcoming.length - 1].id : (events[0]?.id ?? '')
@@ -131,12 +131,17 @@ export function MaterialiseCard({ events }: { events: Event[] }) {
           Vergangenes Event — in einen gelaufenen Markt wird nichts mehr geschrieben.
         </p>
       )}
-      <p className="text-muted-foreground text-xs">
-        Der Probelauf läuft denselben Weg und rollt zurück — sein Bericht ist der echte. Eine
-        Nummer, die in keinem Pool des Events liegt, braucht erst einen geschlossenen
-        Dauernummern-Pool (Variation, die Nummern, <code>obtainableTo</code> in der
-        Vergangenheit) — noch in der PocketBase-Admin-UI.
-      </p>
+      <div className="text-muted-foreground space-y-1 text-xs">
+        <p>
+          Trägt jede aktive {registerTerm} als Registrierung in das Event ein — so, als hätte die Person sich
+          selbst angemeldet. Danach steht sie im Export für die Kasse. Vorher zeigt der <strong>Probelauf</strong>,
+          was passieren würde, ohne etwas zu speichern.
+        </p>
+        <p>
+          Voraussetzung: das Event hat einen {registerTerm}n-Pool, der die Nummern enthält (Tab „Pools"). Fehlt
+          eine Nummer dort, meldet der Probelauf „nicht im Pool".
+        </p>
+      </div>
 
       {report && <Report report={report} />}
     </div>

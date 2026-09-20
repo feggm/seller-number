@@ -1,4 +1,5 @@
-import type { Holder, NumberStatus, Variation } from '@/clients/admin/useRegisterQueries'
+import type { Event, Holder, NumberStatus, Variation } from '@/clients/admin/useRegisterQueries'
+import { resolveNumbers, usePoolsQuery } from '@/clients/admin/useRegisterQueries'
 import { useCreateNumberMutation } from '@/clients/admin/useRegisterMutations'
 import type { HolderInput } from '@/clients/admin/useRegisterMutations'
 import { Button } from '@/components/ui/button'
@@ -7,18 +8,22 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Field, HolderFields, Select } from './fields'
-import { emptyHolderInput } from './helpers'
+import { emptyHolderInput, formatDay } from './helpers'
 
 /** A new Dauernummer: number + variation, held by an existing person or a new one. The
  *  unique index (variation, number) refuses a duplicate — the toast then says so. */
 export function NewNumberForm({
   variations,
   holders,
+  events,
   defaultVariationId,
+  registerTerm,
 }: {
   variations: Variation[]
   holders: Holder[]
+  events: Event[]
   defaultVariationId: string
+  registerTerm: string
 }) {
   const [number, setNumber] = useState('')
   const [variationId, setVariationId] = useState(defaultVariationId)
@@ -29,10 +34,39 @@ export function NewNumberForm({
   const [newHolder, setNewHolder] = useState<HolderInput>(emptyHolderInput())
   const create = useCreateNumberMutation()
 
+  // A Verkaufsnummer only exists inside a pool. The next event's pools say which numbers the
+  // category has at all — and whether the number sits in the public range, where it would be
+  // handed out to anyone before it gets materialised.
+  const today = new Date().toISOString().slice(0, 10)
+  const upcoming = events.filter((e) => e.eventDate.slice(0, 10) >= today)
+  const referenceEvent: Event | undefined = upcoming.length > 0 ? upcoming[upcoming.length - 1] : events.at(0)
+  const pools = usePoolsQuery(referenceEvent?.id ?? '')
+  const chosenVariation = variationId || defaultVariationId
+  const parsed = Number(number)
+  const numberValid = number.trim() !== '' && Number.isInteger(parsed) && parsed > 0
+  const poolsOfVariation = (pools.data ?? []).filter((p) => p.sellerNumberVariation === chosenVariation)
+  const containing = numberValid
+    ? poolsOfVariation.filter((p) => resolveNumbers(p.numbersAsJsonArray).includes(parsed))
+    : []
+  const inOpenPool = containing.some((p) => !(p.obtainableTo !== '' && p.obtainableTo.slice(0, 10) < today))
+  const poolCheck: { ok: boolean; text: string; level: 'ok' | 'warn' | 'error' } | null = !numberValid
+    ? null
+    : !referenceEvent || !pools.data
+      ? null
+      : containing.length === 0
+        ? { ok: false, level: 'error', text: `Nr. ${String(parsed)} liegt in keinem Pool von „${referenceEvent.eventName}" (${formatDay(referenceEvent.eventDate)}) — erst den Pool anlegen oder erweitern.` }
+        : inOpenPool
+          ? { ok: true, level: 'warn', text: `Nr. ${String(parsed)} liegt im offenen Publikums-Pool: vor dem Kopieren in den ${registerTerm}n-Pool umziehen, sonst kann sie jeder buchen.` }
+          : { ok: true, level: 'ok', text: `Nr. ${String(parsed)} liegt im ${registerTerm}n-Pool von „${referenceEvent.eventName}".` }
+
   const submit = async () => {
     const n = Number(number)
     if (!Number.isInteger(n) || n <= 0) {
-      toast.error('Nummer muss eine positive ganze Zahl sein')
+      toast.error('Verkaufsnummer muss eine positive ganze Zahl sein')
+      return
+    }
+    if (poolCheck && !poolCheck.ok) {
+      toast.error(poolCheck.text)
       return
     }
     const created = await create.mutateAsync({
@@ -59,11 +93,12 @@ export function NewNumberForm({
       }}
     >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Field label="Nummer">
+        <Field label="Verkaufsnummer">
           <Input
             inputMode="numeric"
             value={number}
             onChange={(e) => { setNumber(e.target.value); }}
+            aria-invalid={poolCheck ? !poolCheck.ok : undefined}
             required
           />
         </Field>
@@ -86,6 +121,20 @@ export function NewNumberForm({
           </Select>
         </Field>
       </div>
+
+      {poolCheck && (
+        <p
+          className={
+            poolCheck.level === 'error'
+              ? 'text-xs text-red-700'
+              : poolCheck.level === 'warn'
+                ? 'text-xs text-amber-700'
+                : 'text-xs text-emerald-700'
+          }
+        >
+          {poolCheck.text}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="flex items-center gap-2">
@@ -114,8 +163,11 @@ export function NewNumberForm({
         </Field>
       )}
 
-      <Button type="submit" disabled={create.isPending || (mode === 'existing' && !holderId)}>
-        Nummer anlegen
+      <Button
+        type="submit"
+        disabled={create.isPending || (mode === 'existing' && !holderId) || (poolCheck !== null && !poolCheck.ok)}
+      >
+        Dauernummer anlegen
       </Button>
     </form>
   )
