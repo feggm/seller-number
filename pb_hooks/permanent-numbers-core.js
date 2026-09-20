@@ -642,6 +642,7 @@ const materialiseRegister = (app, { eventId, source, dryRun, now }) => {
 
 module.exports = {
   MAX_HOLDERS_PER_IMPORT,
+  runMaybeDry,
   normaliseName,
   nameHash,
   sha256Hex,

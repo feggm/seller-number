@@ -193,8 +193,9 @@ via ``require(`${__hooks}/name.js`)``.
 | `registration.pb.js` | POST `/api/seller-number/registration` |
 | `csv-export.pb.js` | GET `/api/seller-number/export-csv` (thin caller of `export-core.js`) |
 | `export-assignment.pb.js` | GET `/api/seller-number/export-assignment`, `…/export-events`, `…/sync-status`; POST `…/export-ack` |
-| `permanent-numbers.pb.js` | POST `/api/seller-number/permanent-numbers/import` and `…/materialise`; holder hash hooks |
+| `permanent-numbers.pb.js` | POST `/api/seller-number/permanent-numbers/import`, `…/materialise`, `…/statistics`; holder hash and registerLog hooks |
 | `permanent-numbers-core.js` | the register: import and materialisation logic, dry-run transactions |
+| `permanent-numbers-statistics.js` | the post-market statistics push: holder match, four-market window, review flag |
 | `sync-log.js` | `writeSyncLog`, `latestPerKind` |
 | `status.pb.js` | GET `/api/seller-number/status` |
 | `public-status.pb.js` | GET `/api/seller-number/public-status` and `…/public-status/history` |
@@ -391,6 +392,34 @@ deleted; otherwise a `sellerDetails` row (name/mail/phone/`isStaff` from the hol
 register materialised whose number has no `aktiv` register row any more (paused, released,
 deleted) is reported as `stale` — never freed here; releasing a number mid-market is the
 operator's call. No mail is sent. One transaction, `dryRun` rolls back.
+
+### POST /api/seller-number/permanent-numbers/statistics
+
+- **Auth**: superuser or `apiClients` (`isExportClient`) — the push carries numbers and name
+  hashes only and can change no number, holder or status
+- **Input**: `{ eventId | eventCategoryId, mode, market: "YYYY-Mon", generatedAt?, dryRun?,
+  stats: { sellers, itemsMean, itemsMedian, revenueCentsMean, revenueCentsMedian,
+  permanentSellers, permanent… }, numbers: [{ number, itemsSold, revenueCents, firstNameHash,
+  lastNameHash, permanent }], topSellers: [{ number, rankRevenue, rankItems, itemsSold,
+  revenueCents, firstNameHash, lastNameHash }] }` — `eventId` for a market the app ran,
+  `eventCategoryId` for the backfill of older markets; ≤ 2000 numbers, ≤ 100 top sellers
+- **Output**: `{ dryRun, mode, market, eventId, eventCategoryId, counts: { rows, created,
+  updated, trimmed, ignored, ambiguous, holder, nameChange, mismatch, flagged, unflagged,
+  topSellers }, flagged: [numbers], warnings }`
+
+The post-market statistics sync (`permanent-numbers-statistics.js`). Every number with a
+register row — resolved through the event's pools, or through the category's variations when
+there is no event and the register has exactly one row for the number (`ambiguous` otherwise)
+— gets its `permanentNumberMarkets` row for the market written or overwritten, with
+`holderMatch` from comparing the pushed hashes with the current holder (`holder` — both equal;
+`nameChange` — first name equal; `mismatch`); `holder` is set only on a match, so a number that
+changes hands starts the new person at zero. Then only the newest four rows per number and
+holder are kept, `marketStats` and `marketTopSellers` for the market are replaced, and every
+touched number's `reviewFlag` is recomputed: four `holder` rows of the current holder whose mean
+items and mean revenue both lie under the median of those four markets' medians (`marketStats`,
+this push's own row included); anything short of the full window clears the flag. Numbers the
+register does not know are ignored. One transaction, `dryRun` rolls back; a `syncLog` row of
+kind `permanent-numbers-statistics` carries the counters.
 
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can
 authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
