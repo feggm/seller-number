@@ -734,7 +734,8 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   the event's pools — free, held, registered — with the registration editable (this event
   only; a register-materialised row is overwritten by the next materialise) and "Nummer
   freigeben" (deletes the sellerNumbers and sellerDetails rows). Edits and releases land in
-  `registerLog` too (`targetCollection` also `sellerDetails` / `sellerNumbers`). No realtime
+  `registerLog` too (`targetCollection` also `sellerDetails` / `sellerNumbers`). A past event
+  (eventDate before today) is read-only there and closed to materialise. No realtime
   subscription here (refused before login); the mutations invalidate the `['admin', …]` queries.
   Access is the superuser account — a separate "Verwalter" role is a later step that needs
   rules on the five collections and the routes.

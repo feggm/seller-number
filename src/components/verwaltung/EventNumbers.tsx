@@ -85,6 +85,10 @@ export function EventNumbers({
   const variationName = (id: string) =>
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
   const today = new Date().toISOString().slice(0, 10)
+  // A market that has happened is history: the figures went to the register, the Kasse
+  // imported the file — nothing here may change it any more.
+  const selectedEvent = events.find((e) => e.id === eventId)
+  const isPast = selectedEvent !== undefined && selectedEvent.eventDate.slice(0, 10) < today
   const registerByKey = new Map(
     registerNumbers.map((n) => [`${n.sellerNumberVariation}:${String(n.permanentNumberNumber)}`, n])
   )
@@ -163,6 +167,11 @@ export function EventNumbers({
           {String(rows.length - registered - held)} frei
         </span>
       </div>
+      {isPast && (
+        <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          Vergangenes Event — nur ansehen. Was an der Kasse war, bleibt so; Korrekturen gehören ins Register.
+        </p>
+      )}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -231,7 +240,7 @@ export function EventNumbers({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {s && (
+                      {s && !isPast && (
                         <Button
                           size="sm"
                           variant={isEditing ? 'secondary' : 'outline'}
@@ -244,7 +253,7 @@ export function EventNumbers({
                       )}
                     </TableCell>
                   </TableRow>
-                  {isEditing && s && (
+                  {isEditing && s && !isPast && (
                     <TableRow className="bg-slate-50">
                       <TableCell colSpan={7} className="whitespace-normal">
                         <EditRegistration
