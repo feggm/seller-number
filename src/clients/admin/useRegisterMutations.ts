@@ -90,6 +90,7 @@ export const useCreateNumberMutation = () =>
       sellerNumberVariation: string
       permanentNumberNumber: number
       heldSince: string
+      status?: z.infer<typeof NumberStatusSchema>
       holderId?: string
       newHolder?: HolderInput
     }) {
@@ -107,7 +108,7 @@ export const useCreateNumberMutation = () =>
         sellerNumberVariation: input.sellerNumberVariation,
         permanentNumberNumber: input.permanentNumberNumber,
         holder: holderId,
-        status: 'aktiv',
+        status: input.status ?? 'aktiv',
         heldSince: input.heldSince,
       })
       return PermanentNumberSchema.parse(

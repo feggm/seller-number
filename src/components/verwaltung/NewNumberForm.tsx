@@ -1,4 +1,4 @@
-import type { Holder, Variation } from '@/clients/admin/useRegisterQueries'
+import type { Holder, NumberStatus, Variation } from '@/clients/admin/useRegisterQueries'
 import { useCreateNumberMutation } from '@/clients/admin/useRegisterMutations'
 import type { HolderInput } from '@/clients/admin/useRegisterMutations'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ export function NewNumberForm({
   const [number, setNumber] = useState('')
   const [variationId, setVariationId] = useState(defaultVariationId)
   const [heldSince, setHeldSince] = useState('')
+  const [status, setStatus] = useState<NumberStatus>('aktiv')
   const [mode, setMode] = useState<'new' | 'existing'>('new')
   const [holderId, setHolderId] = useState('')
   const [newHolder, setNewHolder] = useState<HolderInput>(emptyHolderInput())
@@ -38,6 +39,7 @@ export function NewNumberForm({
       sellerNumberVariation: variationId || defaultVariationId,
       permanentNumberNumber: n,
       heldSince,
+      status,
       holderId: mode === 'existing' ? holderId : undefined,
       newHolder: mode === 'new' ? newHolder : undefined,
     })
@@ -76,6 +78,12 @@ export function NewNumberForm({
         </Field>
         <Field label="Dauernummer seit (optional)">
           <Input type="date" value={heldSince} onChange={(e) => { setHeldSince(e.target.value); }} />
+        </Field>
+        <Field label="Status">
+          <Select value={status} onChange={(e) => { setStatus(e.target.value as NumberStatus); }}>
+            <option value="aktiv">aktiv — wird materialisiert</option>
+            <option value="pausiert">pausiert — setzt diesen Markt aus</option>
+          </Select>
         </Field>
       </div>
 
