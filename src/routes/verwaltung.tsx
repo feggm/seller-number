@@ -104,6 +104,9 @@ function Register() {
   const variationIds = new Set(categoryVariations.map((v) => v.id))
   const categoryNumbers = numbers.data.filter((n) => variationIds.has(n.sellerNumberVariation))
   const categoryEvents = events.data.filter((e) => e.eventCategory === selectedCategory)
+  const categoryName = categories.data.find((c) => c.id === selectedCategory)?.eventCategoryName ?? ''
+  // Decision 14: the Anziehbar's register is its staff numbers.
+  const registerTerm = /anziehbar|azb/i.test(categoryName) ? 'Mitarbeiternummer' : 'Dauernummer'
   const standardVariation =
     categoryVariations.find((v) => /verkaufsnummer/i.test(v.sellerNumberVariationName)) ??
     categoryVariations.at(0)
@@ -186,6 +189,7 @@ function Register() {
           events={categoryEvents}
           variations={categoryVariations}
           registerNumbers={categoryNumbers}
+          registerTerm={registerTerm}
         />
       )}
     </div>
