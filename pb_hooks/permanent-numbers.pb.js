@@ -201,7 +201,7 @@ onRecordUpdate((e) => {
 // materialise) save through the app and land in syncLog instead. Never blocks the edit.
 // The handlers read the collection from the record, not from a closure: module scope is not
 // visible at request time (see CLAUDE.md), the loop variable only names the hook filter.
-for (const registerCollection of ['permanentNumbers', 'permanentNumberHolders']) {
+for (const registerCollection of ['permanentNumbers', 'permanentNumberHolders', 'sellerDetails', 'sellerNumbers']) {
   onRecordCreateRequest((e) => {
     const log = require(`${__hooks}/register-log.js`)
     const collectionName = e.record.collection().name

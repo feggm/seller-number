@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EventNumbers } from '@/components/verwaltung/EventNumbers'
 import { Field, Select } from '@/components/verwaltung/fields'
 import { MaterialiseCard } from '@/components/verwaltung/MaterialiseCard'
 import { NewNumberForm } from '@/components/verwaltung/NewNumberForm'
@@ -86,7 +87,7 @@ function Register() {
   const numbers = usePermanentNumbersQuery(true)
   const events = useEventsQuery(true)
   const [categoryId, setCategoryId] = useState('')
-  const [section, setSection] = useState<'register' | 'new' | 'materialise'>('register')
+  const [section, setSection] = useState<'register' | 'new' | 'materialise' | 'event'>('register')
 
   if (
     !categories.data ||
@@ -145,6 +146,7 @@ function Register() {
               ['register', `Register (${String(categoryNumbers.length)})`],
               ['new', 'Nummer anlegen'],
               ['materialise', 'In ein Event schreiben'],
+              ['event', 'Alle Nummern im Event'],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -177,6 +179,14 @@ function Register() {
       )}
       {section === 'materialise' && (
         <MaterialiseCard key={selectedCategory} events={categoryEvents} />
+      )}
+      {section === 'event' && (
+        <EventNumbers
+          key={selectedCategory}
+          events={categoryEvents}
+          variations={categoryVariations}
+          registerNumbers={categoryNumbers}
+        />
       )}
     </div>
   )
