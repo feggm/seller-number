@@ -63,6 +63,8 @@ export function MaterialiseCard({ events }: { events: Event[] }) {
   }
 
   const dryRunMatches = report?.dryRun === true && report.event.id === eventId
+  // A past market is closed for the register too: nothing is written into it any more.
+  const isPast = !upcoming.some((u) => u.id === eventId)
   const blocking = report ? (report.counts.conflict ?? 0) + (report.counts.notInPool ?? 0) : 0
 
   return (
@@ -85,14 +87,14 @@ export function MaterialiseCard({ events }: { events: Event[] }) {
           </Select>
         </Field>
         <div className="self-end">
-          <Button variant="outline" disabled={!eventId || materialise.isPending} onClick={() => void run(true)}>
+          <Button variant="outline" disabled={!eventId || isPast || materialise.isPending} onClick={() => void run(true)}>
             Probelauf
           </Button>
         </div>
         <div className="self-end">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={!dryRunMatches || materialise.isPending}>
+              <Button variant="destructive" disabled={!dryRunMatches || isPast || materialise.isPending}>
                 Materialisieren
               </Button>
             </AlertDialogTrigger>
@@ -124,6 +126,11 @@ export function MaterialiseCard({ events }: { events: Event[] }) {
           </AlertDialog>
         </div>
       </div>
+      {isPast && (
+        <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          Vergangenes Event — in einen gelaufenen Markt wird nichts mehr geschrieben.
+        </p>
+      )}
       <p className="text-muted-foreground text-xs">
         Der Probelauf läuft denselben Weg und rollt zurück — sein Bericht ist der echte. Eine
         Nummer, die in keinem Pool des Events liegt, braucht erst einen geschlossenen
