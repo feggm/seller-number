@@ -727,7 +727,11 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   Superuser login (`_superusers` via the SDK, PocketBase's own persisted authStore); the page
   then reads and writes the superuser-only collections directly (`src/clients/admin/*`) — the
   record hooks keep hashes and the contact rule — and calls `permanent-numbers/materialise`
-  for the event step (dry run first, the real run behind a dialog). One category at a time:
+  for the event step (dry run first, the real run behind a dialog). One category at a time
+  (toggle in the header; a dropdown from four categories on) and five sections — Dauernummern,
+  Dauernummer anlegen (the number must lie in a pool of the next event; a number in the public
+  pool gets a warning), Dauernummern in Event kopieren, Verkäuferliste, Pools (read-only
+  overview of the event's pools):
   register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new
   person, the number's and holder's "Verlauf" from `registerLog`), "Nummer anlegen", "In ein
   Event schreiben" with the classified report, and "Alle Nummern im Event": every number of

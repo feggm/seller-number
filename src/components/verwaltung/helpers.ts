@@ -37,3 +37,22 @@ export const formatDay = (dbDate: string) => {
 }
 
 export const toDayInput = (dbDate: string) => dbDate.slice(0, 10)
+
+/** [1,2,3,5,8,9,10] → "1–3, 5, 8–10" */
+export function describeRange(numbers: number[]): string {
+  const sorted = [...numbers].sort((a, b) => a - b)
+  const parts: string[] = []
+  let start: number | null = null
+  let prev: number | null = null
+  for (const n of sorted) {
+    if (start === null || prev === null) {
+      start = n
+    } else if (n !== prev + 1) {
+      parts.push(start === prev ? String(start) : `${String(start)}–${String(prev)}`)
+      start = n
+    }
+    prev = n
+  }
+  if (start !== null && prev !== null) parts.push(start === prev ? String(start) : `${String(start)}–${String(prev)}`)
+  return parts.join(', ')
+}
