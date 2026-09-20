@@ -2,6 +2,7 @@
 //
 //   POST /api/seller-number/permanent-numbers/import       { dryRun, holders: [{number, variation, firstName, lastName, email?, phone?, contactChannel?, isStaff?, heldSince?}] }
 //   POST /api/seller-number/permanent-numbers/materialise  { eventId, source: "register", dryRun }
+//   POST /api/seller-number/permanent-numbers/statistics   { eventId | eventCategoryId, mode, market, stats, numbers, topSellers, dryRun }
 //
 // Both run the real write path inside one transaction and roll it back on dryRun, so the dry
 // run's report is exactly what the real run would do. Both write a syncLog entry (counters
@@ -110,6 +111,67 @@ routerAdd('POST', '/api/seller-number/permanent-numbers/materialise', (e) => {
       dryRun,
       status: 'error',
       summary: { source, error: status === 500 ? 'internal error' : String(error.message) },
+      ipAddress: e.realIP(),
+      startedAt,
+    })
+    return e.json(status, { error: status === 500 ? 'Internal server error' : error.message })
+  }
+})
+
+// The post-market statistics push (§1.10): figures and name hashes only, so the export account
+// may write it — it can change no number, no holder, no status, only marketStats,
+// marketTopSellers, permanentNumberMarkets and the advisory reviewFlag.
+routerAdd('POST', '/api/seller-number/permanent-numbers/statistics', (e) => {
+  const stats = require(`${__hooks}/permanent-numbers-statistics.js`)
+  const syncLog = require(`${__hooks}/sync-log.js`)
+  const { isExportClient } = require(`${__hooks}/export-core.js`)
+
+  if (!isExportClient(e)) {
+    return e.json(401, { error: 'Unauthorized: export client or admin access required' })
+  }
+
+  let body
+  try {
+    body = JSON.parse(JSON.stringify(e.requestInfo().body || {}))
+  } catch (error) {
+    return e.json(400, { error: 'Body must be JSON' })
+  }
+  const dryRun = body.dryRun === true
+  const startedAt = new Date()
+  const eventId = /^[a-z0-9]{15}$/.test(String(body.eventId || '')) ? String(body.eventId) : ''
+  const rowCount = Array.isArray(body.numbers) ? body.numbers.length : 0
+
+  try {
+    const result = stats.pushStatistics($app, body, { dryRun, now: startedAt })
+    syncLog.writeSyncLog($app, {
+      direction: 'in',
+      kind: 'permanent-numbers-statistics',
+      eventId,
+      client: syncLog.clientLabel(e),
+      mode: String(body.mode || ''),
+      rowCount,
+      dryRun,
+      status: 'ok',
+      summary: Object.assign({ market: result.market }, result.counts),
+      ipAddress: e.realIP(),
+      startedAt,
+    })
+    return e.json(200, result)
+  } catch (error) {
+    const status = error && error.status ? error.status : 500
+    if (status === 500) {
+      $app.logger().error('permanent-numbers/statistics failed', 'error', error && error.message)
+    }
+    syncLog.writeSyncLog($app, {
+      direction: 'in',
+      kind: 'permanent-numbers-statistics',
+      eventId,
+      client: syncLog.clientLabel(e),
+      mode: String(body.mode || ''),
+      rowCount,
+      dryRun,
+      status: 'error',
+      summary: { market: String(body.market || ''), error: status === 500 ? 'internal error' : String(error.message) },
       ipAddress: e.realIP(),
       startedAt,
     })

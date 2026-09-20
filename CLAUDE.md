@@ -34,7 +34,7 @@ npm run deploy:ssh
 ## PocketBase hook conventions
 
 Route-registering files must end with `.pb.js`; plain `.js` files (`cache.js`, `email.js`,
-`berlin-time.js`, `status-core.js`, `status-samples.js`, `export-core.js`, `sync-log.js`, `register-log.js`) are shared modules loaded via
+`berlin-time.js`, `status-core.js`, `status-samples.js`, `export-core.js`, `sync-log.js`, `register-log.js`, `permanent-numbers-statistics.js`) are shared modules loaded via
 ``require(`${__hooks}/name.js`)``. `status-sampler.pb.js` registers no routes but must still end
 in `.pb.js` to be loaded as a hook entry point.
 
