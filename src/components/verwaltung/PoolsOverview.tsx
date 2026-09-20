@@ -16,7 +16,7 @@ import {
 import { useState } from 'react'
 
 import { Field, Select } from './fields'
-import { describeRange, formatDay } from './helpers'
+import { describeRange, formatDay, gapsBetween } from './helpers'
 
 /** The pools of one event, one row each: which numbers, who may take them and when, how many
  *  are taken. The closed Dauernummern pool sits next to the public ranges, so an extra range
@@ -78,6 +78,7 @@ export function PoolsOverview({
     }
   })
   rows.sort((a, b) => Number(a.permanent) - Number(b.permanent) || a.range.localeCompare(b.range, undefined, { numeric: true }))
+  const gaps = gapsBetween(pools.data.flatMap((p) => resolveNumbers(p.numbersAsJsonArray)))
 
   return (
     <div className="space-y-3">
@@ -139,6 +140,14 @@ export function PoolsOverview({
           </TableBody>
         </Table>
       </div>
+      {gaps.length > 0 && (
+        <p className="text-muted-foreground text-xs">
+          <strong>Ausgelassen:</strong> <span className="font-mono">{describeRange(gaps)}</span> — in keinem Pool
+          dieses Events. Kleidergrößen (bei der Anziehbar 32–48 gerade, beim Kinderkleidermarkt 50, 56, 62 …)
+          lesen sich auf dem Etikett als Größe, die Spendennummer gehört niemandem; beim Kinderkleidermarkt fehlen
+          im Publikums-Pool außerdem die aktiven Dauernummern, die im 🔒-Pool liegen.
+        </p>
+      )}
       <p className="text-muted-foreground text-xs">
         Pools werden noch in der PocketBase-Admin-UI angelegt. Ein {registerTerm}n-Pool trägt dort das Häkchen
         <code> isPermanentPool</code> und ein <code>obtainableTo</code> in der Vergangenheit: niemand kann daraus

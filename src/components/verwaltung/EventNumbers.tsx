@@ -40,7 +40,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Field, Select } from './fields'
-import { formatDay } from './helpers'
+import { describeRange, formatDay, gapsBetween } from './helpers'
 
 type Row = {
   number: number
@@ -118,6 +118,9 @@ export function EventNumbers({
     }
   }
   rows.sort((a, b) => a.number - b.number || a.variationName.localeCompare(b.variationName))
+  // Gaps between the numbers of this event, shown as their own row so nobody wonders where
+  // 34, 36, 38 … went. Only while the list is unfiltered — a search result has gaps of its own.
+  const gapSet = new Set(gapsBetween(rows.map((r) => r.number)))
 
   const needle = filter.trim().toLowerCase()
   const visible = rows.filter((r) => {
@@ -200,13 +203,25 @@ export function EventNumbers({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((r) => {
+            {visible.map((r, index) => {
               const s = r.sellerNumber
               const d = s?.expand?.sellerDetails
               const key = `${r.variationName}:${String(r.number)}`
               const isEditing = editingId === key
+              const previous = index > 0 ? visible[index - 1].number : null
+              const skipped: number[] = []
+              if (!needle && !onlyTaken && previous !== null) {
+                for (let n = previous + 1; n < r.number; n++) if (gapSet.has(n)) skipped.push(n)
+              }
               return (
                 <RowGroup key={key}>
+                  {skipped.length > 0 && (
+                    <TableRow className="bg-slate-50/60">
+                      <TableCell colSpan={7} className="text-muted-foreground py-1 text-xs italic whitespace-normal">
+                        ausgelassen: {describeRange(skipped)} — Kleidergrößen und die Spendennummer werden nicht als Verkaufsnummer vergeben
+                      </TableCell>
+                    </TableRow>
+                  )}
                   <TableRow className={isEditing ? 'bg-slate-50' : undefined}>
                     <TableCell className="font-mono font-semibold">{r.number}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">

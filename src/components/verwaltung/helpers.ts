@@ -56,3 +56,16 @@ export function describeRange(numbers: number[]): string {
   if (start !== null && prev !== null) parts.push(start === prev ? String(start) : `${String(start)}–${String(prev)}`)
   return parts.join(', ')
 }
+
+/** The numbers between the smallest and the largest that are in none of the pools — left out
+ *  on purpose (clothing sizes read wrong on a label, the donation number belongs to nobody),
+ *  but puzzling in a list unless said so. */
+export function gapsBetween(numbers: number[]): number[] {
+  if (numbers.length === 0) return []
+  const have = new Set(numbers)
+  const min = Math.min(...numbers)
+  const max = Math.max(...numbers)
+  const gaps: number[] = []
+  for (let n = min; n <= max; n++) if (!have.has(n)) gaps.push(n)
+  return gaps
+}
