@@ -158,3 +158,34 @@ export const useEventsQuery = (enabled: boolean) =>
 /** After any register write: everything the page shows comes from these five lists. */
 export const invalidateRegister = () =>
   queryClient.invalidateQueries({ queryKey: ['admin'] })
+
+export const RegisterLogEntrySchema = z.object({
+  id: z.string(),
+  targetCollection: z.enum(['permanentNumbers', 'permanentNumberHolders']),
+  recordId: z.string(),
+  recordLabel: z.string(),
+  action: z.enum(['create', 'update', 'delete']),
+  changes: z.record(z.string(), z.object({ from: z.unknown(), to: z.unknown() })).nullable(),
+  actor: z.string(),
+  created: z.string(),
+})
+export type RegisterLogEntry = z.infer<typeof RegisterLogEntrySchema>
+
+/** The change history of one number and its holder — the newest first. */
+export const useRegisterLogQuery = (recordIds: string[]) =>
+  useQuery({
+    queryKey: ['admin', 'registerLog', ...recordIds],
+    queryFn: withErrorLogging(async function getAdminRegisterLogQuery() {
+      if (recordIds.length === 0) return []
+      const filter = recordIds.map((_, i) => `recordId = {:id${String(i)}}`).join(' || ')
+      const params = Object.fromEntries(recordIds.map((id, i) => [`id${String(i)}`, id]))
+      return RegisterLogEntrySchema.array().parse(
+        await pb.collection('registerLog').getList(1, 30, {
+          filter: pb.filter(filter, params),
+          fields: fieldsOf(RegisterLogEntrySchema),
+          sort: '-created',
+        }).then((page) => page.items)
+      )
+    }),
+    staleTime: Infinity,
+  })

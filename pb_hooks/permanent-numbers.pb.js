@@ -133,3 +133,56 @@ onRecordUpdate((e) => {
   applyHolderHashes(e.record)
   e.next()
 }, 'permanentNumberHolders')
+
+// Every edit by a person — Verwaltung page, admin UI, curl — leaves a registerLog row with the
+// fields that changed. The request hooks see the account; the register's own routes (import,
+// materialise) save through the app and land in syncLog instead. Never blocks the edit.
+// The handlers read the collection from the record, not from a closure: module scope is not
+// visible at request time (see CLAUDE.md), the loop variable only names the hook filter.
+for (const registerCollection of ['permanentNumbers', 'permanentNumberHolders']) {
+  onRecordCreateRequest((e) => {
+    const log = require(`${__hooks}/register-log.js`)
+    const collectionName = e.record.collection().name
+    e.next()
+    log.writeRegisterLog($app, e, {
+      collectionName,
+      recordId: e.record.get('id'),
+      recordLabel: log.labelFor($app, e.record, collectionName),
+      action: 'create',
+      before: {},
+      after: log.snapshot(e.record, collectionName),
+    })
+  }, registerCollection)
+
+  onRecordUpdateRequest((e) => {
+    const log = require(`${__hooks}/register-log.js`)
+    const collectionName = e.record.collection().name
+    // The stored row, read before the request is applied — a fresh read, not
+    // e.record.original(), which is not reliable across the save.
+    let before = {}
+    try {
+      before = log.snapshot($app.findRecordById(collectionName, e.record.get('id')), collectionName)
+    } catch (error) {
+      before = {}
+    }
+    e.next()
+    log.writeRegisterLog($app, e, {
+      collectionName,
+      recordId: e.record.get('id'),
+      recordLabel: log.labelFor($app, e.record, collectionName),
+      action: 'update',
+      before,
+      after: log.snapshot(e.record, collectionName),
+    })
+  }, registerCollection)
+
+  onRecordDeleteRequest((e) => {
+    const log = require(`${__hooks}/register-log.js`)
+    const collectionName = e.record.collection().name
+    const before = log.snapshot(e.record, collectionName)
+    const recordId = e.record.get('id')
+    const recordLabel = log.labelFor($app, e.record, collectionName)
+    e.next()
+    log.writeRegisterLog($app, e, { collectionName, recordId, recordLabel, action: 'delete', before, after: {} })
+  }, registerCollection)
+}
