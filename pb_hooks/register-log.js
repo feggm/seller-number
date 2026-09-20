@@ -7,6 +7,9 @@
 const LOGGED_FIELDS = {
   permanentNumbers: ['sellerNumberVariation', 'permanentNumberNumber', 'holder', 'status', 'heldSince', 'releasedAt'],
   permanentNumberHolders: ['holderFirstName', 'holderLastName', 'holderEmail', 'holderPhone', 'holderContactChannel', 'isStaff', 'holderNote'],
+  // An event's registrations, when the Verwaltung page edits or frees them.
+  sellerDetails: ['sellerFirstName', 'sellerLastName', 'sellerEmail', 'sellerPhone', 'isStaff', 'permanentNumberHolder'],
+  sellerNumbers: ['sellerNumberNumber', 'sellerNumberPool', 'sellerDetails', 'reservedAt'],
 }
 
 const snapshot = (record, collectionName) => {
@@ -41,6 +44,12 @@ const labelFor = (app, record, collectionName) => {
   try {
     if (collectionName === 'permanentNumberHolders') {
       return `${record.get('holderFirstName')} ${record.get('holderLastName')}`.trim()
+    }
+    if (collectionName === 'sellerDetails') {
+      return `${record.get('sellerFirstName')} ${record.get('sellerLastName')}`.trim()
+    }
+    if (collectionName === 'sellerNumbers') {
+      return `Nr. ${record.get('sellerNumberNumber')} im Event`
     }
     let variationName = ''
     try {

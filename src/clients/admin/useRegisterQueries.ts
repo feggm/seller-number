@@ -189,3 +189,99 @@ export const useRegisterLogQuery = (recordIds: string[]) =>
     }),
     staleTime: Infinity,
   })
+
+// ---------------------------------------------------------------------------
+// An event's numbers — every number of its pools, reserved or registered or free
+// ---------------------------------------------------------------------------
+
+export const PoolSchema = z.object({
+  id: z.string(),
+  event: z.string(),
+  sellerNumberVariation: z.string(),
+  numbersAsJsonArray: z.string(),
+  obtainableFrom: z.string(),
+  obtainableTo: z.string(),
+})
+export type Pool = z.infer<typeof PoolSchema>
+
+export const SellerDetailsSchema = z.object({
+  id: z.string(),
+  sellerFirstName: z.string(),
+  sellerLastName: z.string(),
+  sellerEmail: z.string(),
+  sellerPhone: z.string(),
+  isStaff: z.boolean(),
+  permanentNumberHolder: z.string(),
+  created: z.string(),
+})
+export type SellerDetails = z.infer<typeof SellerDetailsSchema>
+
+export const SellerNumberSchema = z.object({
+  id: z.string(),
+  sellerNumberNumber: z.number(),
+  sellerNumberPool: z.string(),
+  reservedAt: z.string(),
+  sellerDetails: z.string(),
+  expand: z.object({ sellerDetails: SellerDetailsSchema.optional() }).optional(),
+})
+export type SellerNumber = z.infer<typeof SellerNumberSchema>
+
+/** The same reading of numbersAsJsonArray as status-core.js / reservation.pb.js — including
+ *  the `{ "from": 0 }` pitfall they share, so this page never shows a number they would not. */
+export const resolveNumbers = (json: string): number[] => {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json) as unknown
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed)) return []
+  const out = new Set<number>()
+  for (const entry of parsed as unknown[]) {
+    if (typeof entry === 'number') out.add(entry)
+    else if (Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'number' && typeof entry[1] === 'number') {
+      for (let i = entry[0]; i <= entry[1]; i++) out.add(i)
+    } else if (entry && typeof entry === 'object' && 'from' in entry && 'to' in entry) {
+      const { from, to } = entry as { from: unknown; to: unknown }
+      if (typeof from === 'number' && typeof to === 'number' && from) {
+        for (let i = from; i <= to; i++) out.add(i)
+      }
+    }
+  }
+  return [...out]
+}
+
+export const usePoolsQuery = (eventId: string) =>
+  useQuery({
+    queryKey: ['admin', 'pools', eventId],
+    queryFn: withErrorLogging(async function getAdminPoolsQuery() {
+      return PoolSchema.array().parse(
+        await pb.collection('sellerNumberPools').getFullList({
+          filter: pb.filter('event = {:eventId}', { eventId }),
+          fields: fieldsOf(PoolSchema),
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled: eventId !== '',
+  })
+
+export const useEventSellerNumbersQuery = (poolIds: string[]) =>
+  useQuery({
+    queryKey: ['admin', 'sellerNumbers', ...poolIds],
+    queryFn: withErrorLogging(async function getAdminEventSellerNumbersQuery() {
+      if (poolIds.length === 0) return []
+      const filter = poolIds.map((_, i) => `sellerNumberPool = {:p${String(i)}}`).join(' || ')
+      const params = Object.fromEntries(poolIds.map((id, i) => [`p${String(i)}`, id]))
+      return SellerNumberSchema.array().parse(
+        await pb.collection('sellerNumbers').getFullList({
+          filter: pb.filter(filter, params),
+          expand: 'sellerDetails',
+          fields: `${fieldsOf(SellerNumberSchema)},expand.sellerDetails.*`,
+          sort: 'sellerNumberNumber',
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled: poolIds.length > 0,
+  })

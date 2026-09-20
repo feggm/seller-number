@@ -114,7 +114,8 @@ holder: there are no real Dauernummern at Anziehbar, but the concept is the same
 
 ### 9a. registerLog
 
-`targetCollection` (select: `permanentNumbers` | `permanentNumberHolders`), `recordId`,
+`targetCollection` (select: `permanentNumbers` | `permanentNumberHolders` | `sellerDetails` |
+`sellerNumbers`), `recordId`,
 `recordLabel` ("Nr. 53 (Verkaufsnummer)" / "Dorothea Krämer"), `action` (select: `create` |
 `update` | `delete`), `changes` (json: field → `{ from, to }` for what differed), `actor`
 (the account's e-mail), `ipAddress`, `created`
@@ -729,7 +730,11 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   for the event step (dry run first, the real run behind a dialog). One category at a time:
   register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new
   person, the number's and holder's "Verlauf" from `registerLog`), "Nummer anlegen", "In ein
-  Event schreiben" with the classified report. No realtime
+  Event schreiben" with the classified report, and "Alle Nummern im Event": every number of
+  the event's pools — free, held, registered — with the registration editable (this event
+  only; a register-materialised row is overwritten by the next materialise) and "Nummer
+  freigeben" (deletes the sellerNumbers and sellerDetails rows). Edits and releases land in
+  `registerLog` too (`targetCollection` also `sellerDetails` / `sellerNumbers`). No realtime
   subscription here (refused before login); the mutations invalidate the `['admin', …]` queries.
   Access is the superuser account — a separate "Verwalter" role is a later step that needs
   rules on the five collections and the routes.

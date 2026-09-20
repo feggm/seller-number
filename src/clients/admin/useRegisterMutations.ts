@@ -164,3 +164,46 @@ export const useMaterialiseMutation = () =>
       )
     }),
   })
+
+// ---------------------------------------------------------------------------
+// An event's registrations
+// ---------------------------------------------------------------------------
+
+export const SellerDetailsInputSchema = z.object({
+  sellerFirstName: z.string().trim().min(1, 'Vorname fehlt'),
+  sellerLastName: z.string().trim().min(1, 'Nachname fehlt'),
+  sellerEmail: z.string().trim().toLowerCase(),
+  sellerPhone: z.string().trim(),
+  isStaff: z.boolean(),
+})
+export type SellerDetailsInput = z.infer<typeof SellerDetailsInputSchema>
+
+export const useUpdateSellerDetailsMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function updateSellerDetailsMutation(input: {
+      id: string
+      data: SellerDetailsInput
+    }) {
+      await pb
+        .collection('sellerDetails')
+        .update(input.id, SellerDetailsInputSchema.parse(input.data))
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
+
+/** Free a number in the event: the reservation row goes, the details row with it. A number
+ *  the register materialised comes back with the next "Materialisieren" unless its register
+ *  row is paused or released first. */
+export const useReleaseSellerNumberMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function releaseSellerNumberMutation(input: {
+      sellerNumberId: string
+      sellerDetailsId: string
+    }) {
+      await pb.collection('sellerNumbers').delete(input.sellerNumberId)
+      if (input.sellerDetailsId) {
+        await pb.collection('sellerDetails').delete(input.sellerDetailsId)
+      }
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
