@@ -110,15 +110,35 @@ function Register() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
-        <Field label="Kategorie" className="w-64">
-          <Select value={selectedCategory} onChange={(e) => { setCategoryId(e.target.value); }}>
-            {categories.data.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.eventCategoryName}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {/* Two categories today: a toggle reads faster than a dropdown. More than three and
+            the dropdown comes back by itself. */}
+        {categories.data.length <= 3 ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-muted-foreground text-xs">Kategorie</span>
+            <div className="flex gap-1 rounded-md border p-1">
+              {categories.data.map((c) => (
+                <Button
+                  key={c.id}
+                  size="sm"
+                  variant={selectedCategory === c.id ? 'default' : 'ghost'}
+                  onClick={() => { setCategoryId(c.id); }}
+                >
+                  {c.eventCategoryName}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Field label="Kategorie" className="w-64">
+            <Select value={selectedCategory} onChange={(e) => { setCategoryId(e.target.value); }}>
+              {categories.data.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.eventCategoryName}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <div className="flex gap-2">
           {(
             [
@@ -141,6 +161,7 @@ function Register() {
 
       {section === 'register' && (
         <RegisterTable
+          key={selectedCategory}
           numbers={categoryNumbers}
           variations={categoryVariations}
           holders={holders.data}
@@ -148,12 +169,15 @@ function Register() {
       )}
       {section === 'new' && standardVariation && (
         <NewNumberForm
+          key={selectedCategory}
           variations={categoryVariations}
           holders={holders.data}
           defaultVariationId={standardVariation.id}
         />
       )}
-      {section === 'materialise' && <MaterialiseCard events={categoryEvents} />}
+      {section === 'materialise' && (
+        <MaterialiseCard key={selectedCategory} events={categoryEvents} />
+      )}
     </div>
   )
 }
