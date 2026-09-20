@@ -125,6 +125,10 @@ export function EventNumbers({
   })
   const registered = rows.filter((r) => r.sellerNumber?.sellerDetails).length
   const held = rows.filter((r) => r.sellerNumber && !r.sellerNumber.sellerDetails).length
+  // A number nobody holds in a closed pool is not free — nobody can reserve it. The
+  // Dauernummern pools are closed on purpose, so their unassigned numbers are reserved range.
+  const unbookable = rows.filter((r) => !r.sellerNumber && r.poolClosed).length
+  const free = rows.length - registered - held - unbookable
 
   return (
     <div className="space-y-3">
@@ -164,7 +168,8 @@ export function EventNumbers({
         </label>
         <span className="text-muted-foreground pb-2 text-sm">
           {String(rows.length)} Nummern · {String(registered)} registriert · {String(held)} nur reserviert ·{' '}
-          {String(rows.length - registered - held)} frei
+          {String(free)} frei
+          {unbookable > 0 && <> · {String(unbookable)} nicht buchbar (geschlossener Pool)</>}
         </span>
       </div>
       {isPast && (
@@ -201,7 +206,13 @@ export function EventNumbers({
                     </TableCell>
                     <TableCell className="text-sm">
                       {!s ? (
-                        <span className="text-muted-foreground">frei</span>
+                        r.poolClosed ? (
+                          <span className="text-muted-foreground" title="im geschlossenen Pool, niemand kann sie buchen">
+                            nicht buchbar
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">frei</span>
+                        )
                       ) : d ? (
                         <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
                           registriert
