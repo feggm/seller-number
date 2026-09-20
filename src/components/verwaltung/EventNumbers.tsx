@@ -61,10 +61,13 @@ export function EventNumbers({
   events,
   variations,
   registerNumbers,
+  registerTerm,
 }: {
   events: Event[]
   variations: Variation[]
   registerNumbers: PermanentNumber[]
+  /** What the category calls a register number — "Dauernummer" or "Mitarbeiternummer". */
+  registerTerm: string
 }) {
   const upcoming = events.filter((e) => e.eventDate >= new Date().toISOString().slice(0, 10))
   const [eventId, setEventId] = useState(
@@ -130,6 +133,24 @@ export function EventNumbers({
   const unbookable = rows.filter((r) => !r.sellerNumber && r.poolClosed).length
   const free = rows.length - registered - held - unbookable
 
+  // One line per pool: the closed Dauernummern pool next to the public ranges, so an
+  // extra range opened to make up for unused register numbers (§1.4, done by hand today)
+  // is visible as what it is.
+  const poolLines = pools.data.map((pool) => {
+    const numbers = resolveNumbers(pool.numbersAsJsonArray)
+    const closed = pool.obtainableTo !== '' && pool.obtainableTo.slice(0, 10) < today
+    const taken = numbers.filter((n) => takenByKey.has(`${pool.id}:${String(n)}`)).length
+    return {
+      id: pool.id,
+      range: describeRange(numbers),
+      variationName: variationName(pool.sellerNumberVariation),
+      closed,
+      obtainableTo: pool.obtainableTo,
+      total: numbers.length,
+      taken,
+    }
+  })
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -169,9 +190,25 @@ export function EventNumbers({
         <span className="text-muted-foreground pb-2 text-sm">
           {String(rows.length)} Nummern · {String(registered)} registriert · {String(held)} nur reserviert ·{' '}
           {String(free)} frei
-          {unbookable > 0 && <> · {String(unbookable)} nicht buchbar (geschlossener Pool)</>}
+          {unbookable > 0 && <> · {String(unbookable)} {registerTerm}n unbesetzt</>}
         </span>
       </div>
+      <ul className="text-muted-foreground grid grid-cols-1 gap-x-6 gap-y-0.5 text-xs md:grid-cols-2">
+        {poolLines.map((p) => (
+          <li key={p.id}>
+            <span className="font-mono">{p.range}</span> · {p.variationName} ·{' '}
+            {p.closed ? (
+              <span title="geschlossener Pool: nur das Register schreibt hinein">
+                {registerTerm}n-Pool 🔒 · {String(p.taken)} besetzt, {String(p.total - p.taken)} unbesetzt
+              </span>
+            ) : (
+              <span>
+                offen{p.obtainableTo ? ` bis ${formatDay(p.obtainableTo)}` : ''} · {String(p.taken)} von {String(p.total)} vergeben
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
       {isPast && (
         <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">
           Vergangenes Event — nur ansehen. Was an der Kasse war, bleibt so; Korrekturen gehören ins Register.
@@ -207,8 +244,8 @@ export function EventNumbers({
                     <TableCell className="text-sm">
                       {!s ? (
                         r.poolClosed ? (
-                          <span className="text-muted-foreground" title="im geschlossenen Pool, niemand kann sie buchen">
-                            nicht buchbar
+                          <span className="text-muted-foreground" title={`${registerTerm} ohne Halter:in — im geschlossenen Pool, niemand kann sie buchen`}>
+                            {registerTerm} unbesetzt
                           </span>
                         ) : (
                           <span className="text-muted-foreground">frei</span>
@@ -289,6 +326,25 @@ export function EventNumbers({
 
 function RowGroup({ children }: { children: React.ReactNode }) {
   return <>{children}</>
+}
+
+/** [1,2,3,5,8,9,10] → "1–3, 5, 8–10" */
+function describeRange(numbers: number[]): string {
+  const sorted = [...numbers].sort((a, b) => a - b)
+  const parts: string[] = []
+  let start: number | null = null
+  let prev: number | null = null
+  for (const n of sorted) {
+    if (start === null || prev === null) {
+      start = n
+    } else if (n !== prev + 1) {
+      parts.push(start === prev ? String(start) : `${String(start)}–${String(prev)}`)
+      start = n
+    }
+    prev = n
+  }
+  if (start !== null && prev !== null) parts.push(start === prev ? String(start) : `${String(start)}–${String(prev)}`)
+  return parts.join(', ')
 }
 
 function EditRegistration({
