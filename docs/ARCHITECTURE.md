@@ -359,19 +359,24 @@ the identical path and rolls back, so its report is exactly what the real run do
 - **Auth**: superuser only
 - **Input**: `{ eventId, source: "register", dryRun }` — `source: "confirmations"` answers 501
   until the confirmation cycle exists
-- **Output**: `{ dryRun, event, registerRows, counts: { created, already, conflict, notInPool,
-  skipped, deadHoldsReplaced }, results: [{ ..., contactChannel, warning? }] }` — `warning` is
-  `manualConfirmation` for a WhatsApp holder and `noContactOnFile` when not even a phone number
-  is known; the operator handles those by hand
+- **Output**: `{ dryRun, event, registerRows, counts: { created, already, updated, conflict,
+  notInPool, skipped, stale, deadHoldsReplaced }, results: [{ ..., contactChannel, warning? }] }`
+  — `warning` is `manualConfirmation` for a WhatsApp holder and `noContactOnFile` when not even a
+  phone number is known; the operator handles those by hand
 
 For every `aktiv` register row whose variation has a pool in the event: the pool is the one of
 the variation's pools whose range holds the number (`notInPool` when none does — add the number
 to a pool first; a pool whose `obtainableTo` has passed keeps it off the public path — and
-`skipped` when more than one does; mind the `{"from":0}` pitfall); then, at `(pool, number)`: a completed registration by this holder →
-`already`; by anyone else → `conflict`, never overwritten; a dead hold (no `sellerDetails`) is
+`skipped` when more than one does; mind the `{"from":0}` pitfall); then, at `(pool, number)`: a
+row the register materialised earlier (`permanentNumberHolder` set) is kept in step — unchanged →
+`already`, holder or holder data changed → `updated` with `changedFields` (a holder change
+rehomes the number, `previousHolderId` says from whom); a completed registration by anyone else
+(no `permanentNumberHolder`) → `conflict`, never overwritten; a dead hold (no `sellerDetails`) is
 deleted; otherwise a `sellerDetails` row (name/mail/phone/`isStaff` from the holder,
-`permanentNumberHolder` set) and a `sellerNumbers` row are created. No mail is sent. One
-transaction, `dryRun` rolls back.
+`permanentNumberHolder` set) and a `sellerNumbers` row are created. Afterwards every row the
+register materialised whose number has no `aktiv` register row any more (paused, released,
+deleted) is reported as `stale` — never freed here; releasing a number mid-market is the
+operator's call. No mail is sent. One transaction, `dryRun` rolls back.
 
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can
 authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
@@ -674,6 +679,16 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   access control: every figure on it is already fetchable unauthenticated from
   `sellerNumberPools` + `sellerNumbers`, so a secret path would buy nothing. It is code-split
   into its own ~12 kB chunk and loads only when visited.
+- `verwaltung` — the Dauernummer register at `/#/verwaltung` for the people who keep it.
+  Superuser login (`_superusers` via the SDK, PocketBase's own persisted authStore); the page
+  then reads and writes the superuser-only collections directly (`src/clients/admin/*`) — the
+  record hooks keep hashes and the contact rule — and calls `permanent-numbers/materialise`
+  for the event step (dry run first, the real run behind a dialog). One category at a time:
+  register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new
+  person), "Nummer anlegen", "In ein Event schreiben" with the classified report. No realtime
+  subscription here (refused before login); the mutations invalidate the `['admin', …]` queries.
+  Access is the superuser account — a separate "Verwalter" role is a later step that needs
+  rules on the five collections and the routes.
 
 ### Event category resolution (`src/context/EventCategoryIdContext.tsx`)
 
