@@ -66,6 +66,7 @@ export function PoolsOverview({
       id: pool.id,
       range: describeRange(numbers),
       variationName: variationName(pool.sellerNumberVariation),
+      permanent: pool.isPermanentPool,
       closed,
       notYet,
       from: pool.obtainableFrom,
@@ -76,7 +77,7 @@ export function PoolsOverview({
       free: numbers.length - registered - held,
     }
   })
-  rows.sort((a, b) => Number(a.closed) - Number(b.closed) || a.range.localeCompare(b.range, undefined, { numeric: true }))
+  rows.sort((a, b) => Number(a.permanent) - Number(b.permanent) || a.range.localeCompare(b.range, undefined, { numeric: true }))
 
   return (
     <div className="space-y-3">
@@ -99,7 +100,7 @@ export function PoolsOverview({
               <TableHead className="text-right">gesamt</TableHead>
               <TableHead className="text-right">registriert</TableHead>
               <TableHead className="text-right">reserviert</TableHead>
-              <TableHead className="text-right">{rows.some((r) => r.closed) ? 'frei / unbesetzt' : 'frei'}</TableHead>
+              <TableHead className="text-right">{rows.some((r) => r.permanent) ? 'frei / unbesetzt' : 'frei'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,9 +109,13 @@ export function PoolsOverview({
                 <TableCell className="font-mono">{r.range}</TableCell>
                 <TableCell className="text-sm">{r.variationName}</TableCell>
                 <TableCell className="text-sm">
-                  {r.closed ? (
-                    <span className="rounded bg-sky-100 px-2 py-0.5 text-xs text-sky-800" title="obtainableTo liegt in der Vergangenheit: nur das Register schreibt hinein">
+                  {r.permanent ? (
+                    <span className="rounded bg-sky-100 px-2 py-0.5 text-xs text-sky-800" title="isPermanentPool: nur das Register schreibt hinein">
                       🔒 {registerTerm}n-Pool
+                    </span>
+                  ) : r.closed ? (
+                    <span className="rounded bg-slate-200 px-2 py-0.5 text-xs text-slate-700">
+                      beendet am {formatDay(r.to)}
                     </span>
                   ) : r.notYet ? (
                     <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
@@ -127,7 +132,7 @@ export function PoolsOverview({
                 <TableCell className="text-right tabular-nums">{r.held}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {r.free}
-                  {r.closed && r.free > 0 && <span className="text-muted-foreground text-xs"> unbesetzt</span>}
+                  {r.permanent && r.free > 0 && <span className="text-muted-foreground text-xs"> unbesetzt</span>}
                 </TableCell>
               </TableRow>
             ))}
@@ -135,9 +140,9 @@ export function PoolsOverview({
         </Table>
       </div>
       <p className="text-muted-foreground text-xs">
-        Pools werden noch in der PocketBase-Admin-UI angelegt. Ein {registerTerm}n-Pool ist ein Pool mit
-        <code> obtainableTo</code> in der Vergangenheit: niemand kann daraus buchen, nur „Dauernummern in Event
-        kopieren" trägt ein.
+        Pools werden noch in der PocketBase-Admin-UI angelegt. Ein {registerTerm}n-Pool trägt dort das Häkchen
+        <code> isPermanentPool</code> und ein <code>obtainableTo</code> in der Vergangenheit: niemand kann daraus
+        buchen, nur „Dauernummern in Event kopieren" trägt ein.
       </p>
     </div>
   )

@@ -201,6 +201,7 @@ export const PoolSchema = z.object({
   numbersAsJsonArray: z.string(),
   obtainableFrom: z.string(),
   obtainableTo: z.string(),
+  isPermanentPool: z.boolean(),
 })
 export type Pool = z.infer<typeof PoolSchema>
 
