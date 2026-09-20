@@ -24,6 +24,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Field, HolderFields, Select } from './fields'
+import { HistoryList } from './HistoryList'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
 
 const STATUS_LABEL: Record<NumberStatus, string> = {
@@ -288,6 +289,11 @@ function EditRow({
         aus der nächsten Materialisierung; eine schon reservierte Nummer bleibt im Event und
         wird dort als <code>stale</code> gemeldet.
       </p>
+
+      <div className="space-y-2 border-t pt-3">
+        <h4 className="text-sm font-semibold">Verlauf</h4>
+        <HistoryList number={number} holders={holders} />
+      </div>
 
       <div className="space-y-3 border-t pt-3">
         <h4 className="text-sm font-semibold">Nummer an eine andere Person geben</h4>

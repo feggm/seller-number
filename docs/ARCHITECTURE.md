@@ -112,6 +112,20 @@ Unique index on `(sellerNumberVariation, permanentNumberNumber)` — the import 
 because of it. All API rules `null`. AZB staff numbers live here too, with `isStaff` on the
 holder: there are no real Dauernummern at Anziehbar, but the concept is the same.
 
+### 9a. registerLog
+
+`targetCollection` (select: `permanentNumbers` | `permanentNumberHolders`), `recordId`,
+`recordLabel` ("Nr. 53 (Verkaufsnummer)" / "Dorothea Krämer"), `action` (select: `create` |
+`update` | `delete`), `changes` (json: field → `{ from, to }` for what differed), `actor`
+(the account's e-mail), `ipAddress`, `created`
+
+Who changed what in the register. Written by the `onRecord*Request` hooks in
+`permanent-numbers.pb.js` (`register-log.js`), so the Verwaltung page, the admin UI and curl all
+leave the same trail; an update that changes nothing writes nothing. The register's own routes
+(import, materialise) save through the app, not through a request, and land in `syncLog`
+instead. Append-only in spirit, superuser-only on all five rules; the Verwaltung page shows it
+as "Verlauf" per number. All API rules `null`.
+
 ### 10. permanentNumberMarkets
 
 `permanentNumber` (relation, required, cascade delete), `market` (text `YYYY-Mon`, required),
@@ -685,7 +699,8 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   record hooks keep hashes and the contact rule — and calls `permanent-numbers/materialise`
   for the event step (dry run first, the real run behind a dialog). One category at a time:
   register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new
-  person), "Nummer anlegen", "In ein Event schreiben" with the classified report. No realtime
+  person, the number's and holder's "Verlauf" from `registerLog`), "Nummer anlegen", "In ein
+  Event schreiben" with the classified report. No realtime
   subscription here (refused before login); the mutations invalidate the `['admin', …]` queries.
   Access is the superuser account — a separate "Verwalter" role is a later step that needs
   rules on the five collections and the routes.
