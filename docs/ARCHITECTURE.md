@@ -175,10 +175,11 @@ no row. Unique on `(permanentNumber, market)`. All API rules `null`.
 ### 11. marketStats
 
 `eventCategory` (relation, required), `market` (text `YYYY-Mon`, required), `event` (relation,
-optional), `sellers` (number), `itemsMean` / `itemsMedian` / `revenueCentsMean` /
-`revenueCentsMedian` (all sellers of that market), `permanentSellers`, `permanentItemsMean` /
-`permanentItemsMedian` / `permanentRevenueCentsMean` / `permanentRevenueCentsMedian` (the
-sellers holding a Dauernummer)
+optional), `sellers` (number — every registered number with a person), `sellersSold` (of
+those, how many sold anything; derived by the route from the pushed numbers), `itemsMean` /
+`itemsMedian` / `revenueCentsMean` / `revenueCentsMedian` (all sellers of that market),
+`permanentSellers`, `permanentSellersSold`, `permanentItemsMean` / `permanentItemsMedian` /
+`permanentRevenueCentsMean` / `permanentRevenueCentsMedian` (the sellers holding a Dauernummer)
 
 The baselines a Dauernummer is measured against, one row per (category, market), kept for every
 market. Pushed together with `permanentNumberMarkets`. Unique on `(eventCategory, market)`. All
