@@ -40,6 +40,14 @@ const STATUS_LABEL: Record<NumberStatus, string> = {
   gesperrt: 'gesperrt',
 }
 
+/** What each status means — the legend above the table and the tooltip on every badge. */
+const STATUS_MEANING: Record<NumberStatus, string> = {
+  aktiv: 'gehört der Person und wird für jedes Event eingetragen',
+  pausiert: 'setzt einen Markt aus — bleibt der Person, wird nicht eingetragen; beim Kinderkleidermarkt geht die Nummer diesen Markt regulär an jemand anderen, bei der Anziehbar bleibt sie leer',
+  freigegeben: 'die Person hat die Dauernummer abgegeben — die Nummer ist frei für den Publikums-Pool oder eine neue Dauernummer; die Marktzahlen bleiben bei der bisherigen Person',
+  gesperrt: 'darf niemandem gegeben werden — nicht der Person, nicht dem Publikum (z. B. nach einem Ausschluss oder weil die Nummer anderweitig reserviert ist)',
+}
+
 const STATUS_CLASS: Record<NumberStatus, string> = {
   aktiv: 'bg-emerald-100 text-emerald-800',
   pausiert: 'bg-amber-100 text-amber-800',
@@ -99,6 +107,19 @@ export function RegisterTable({
           {visible.length} von {numbers.length} Nummern
         </span>
       </div>
+      <details className="text-muted-foreground text-xs">
+        <summary className="cursor-pointer">Was die Status bedeuten</summary>
+        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          {(Object.keys(STATUS_LABEL) as NumberStatus[]).map((s) => (
+            <RowGroup key={s}>
+              <dt>
+                <span className={`rounded px-2 py-0.5 ${STATUS_CLASS[s]}`}>{STATUS_LABEL[s]}</span>
+              </dt>
+              <dd>{STATUS_MEANING[s]}</dd>
+            </RowGroup>
+          ))}
+        </dl>
+      </details>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -162,6 +183,7 @@ export function RegisterTable({
                     <TableCell>
                       <span
                         className={`rounded px-2 py-0.5 text-xs ${STATUS_CLASS[n.status]}`}
+                        title={STATUS_MEANING[n.status]}
                       >
                         {STATUS_LABEL[n.status]}
                       </span>
@@ -400,8 +422,8 @@ function EditRow({
             disabled={busy}
           >
             {(Object.keys(STATUS_LABEL) as NumberStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
+              <option key={s} value={s} title={STATUS_MEANING[s]}>
+                {STATUS_LABEL[s]} — {STATUS_MEANING[s].split(' — ')[0].split(';')[0]}
               </option>
             ))}
           </Select>
@@ -421,9 +443,9 @@ function EditRow({
         </div>
       </div>
       <p className="text-muted-foreground text-xs">
-        <code>pausiert</code>/<code>freigegeben</code>/<code>gesperrt</code> nimmt die Nummer
-        aus der nächsten Materialisierung; eine schon reservierte Nummer bleibt im Event und
-        wird dort als <code>stale</code> gemeldet.
+        {STATUS_MEANING[status]}. Nur <code>aktiv</code> wird in ein Event kopiert; eine schon
+        eingetragene Nummer bleibt im Event und wird beim nächsten Kopieren als „veraltet" gemeldet —
+        freigeben dann in der Verkäuferliste.
       </p>
 
       <div className="space-y-2 border-t pt-3">
