@@ -10,6 +10,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import { PagingBar } from './PagingBar'
+import { pageOf, usePaging } from './usePaging'
+
 const KIND_LABEL: Record<string, string> = {
   'export-assignment': 'Export an die Kasse',
   'export-events': 'Event-Liste an die Kasse',
@@ -36,11 +39,12 @@ const summarise = (summary: unknown) => {
 /** PocketBase's own record of every sync in or out — the other side of the Kasse's audit log. */
 export function SyncLogTab({ events }: { events: Event[] }) {
   const log = useSyncLogQuery(true)
-  if (!log.data) return <Skeleton className="h-40 w-full" />
   const eventName = (id: string) => events.find((e) => e.id === id)?.eventName ?? ''
   // Entries of this category's events, plus the ones without an event (they carry the mode).
   const eventIds = new Set(events.map((e) => e.id))
-  const rows = log.data.filter((r) => r.event === '' || eventIds.has(r.event))
+  const rows = (log.data ?? []).filter((r) => r.event === '' || eventIds.has(r.event))
+  const page = pageOf(rows, usePaging(events.map((e) => e.id).join(',')))
+  if (!log.data) return <Skeleton className="h-40 w-full" />
 
   return (
     <div className="space-y-2">
@@ -57,7 +61,7 @@ export function SyncLogTab({ events }: { events: Event[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((r: SyncLogEntry) => (
+            {page.rows.map((r: SyncLogEntry) => (
               <TableRow key={r.id} className={r.dryRun ? 'text-muted-foreground' : undefined}>
                 <TableCell className="text-xs tabular-nums whitespace-nowrap">{fmtWhen(r.finishedAt || r.startedAt)}</TableCell>
                 <TableCell className="text-sm">
@@ -84,6 +88,7 @@ export function SyncLogTab({ events }: { events: Event[] }) {
           </TableBody>
         </Table>
       </div>
+      <PagingBar view={page} noun="Einträgen" />
       <p className="text-muted-foreground text-xs">
         Die letzten 200 Einträge; Probeläufe grau. Der Export ist ein Pull der Kasse, „bestätigt" der Import dort — erst
         das ist ein Sync. Personendaten stehen hier nie, nur Zähler.

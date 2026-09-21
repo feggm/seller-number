@@ -108,10 +108,9 @@ export function MarketStatsTab({
               <TableBody>
                 {markets.map((m, i) => (
                   <TableRow key={m.id} className={i < WINDOW ? undefined : 'text-muted-foreground'}>
-                    <TableCell className="font-mono">
+                    <TableCell className="font-mono" title={m.event ? eventName(m.event) : undefined}>
                       {m.market}
                       {i < WINDOW && <span className="ml-1 text-xs text-emerald-700" title="im Vier-Märkte-Fenster">●</span>}
-                      {m.event && <span className="text-muted-foreground ml-2 text-xs">{eventName(m.event)}</span>}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{m.sellers}</TableCell>
                     <TableCell className="text-right tabular-nums">
