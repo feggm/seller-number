@@ -97,7 +97,8 @@ export function RegisterTable({
     )
   })
   const flaggedCount = numbers.filter(needsReview).length
-  const paging = usePaging(visible.length, `${needle}|${String(onlyFlagged)}|${sort.key}${String(sort.dir)}`)
+  const paging = usePaging(`${needle}|${String(onlyFlagged)}|${sort.key}${String(sort.dir)}`)
+  const page = pageOf(visible, paging)
   const sortValue = (n: PermanentNumber): string | number => {
     const h = n.expand?.holder
     switch (sort.key) {
@@ -183,7 +184,7 @@ export function RegisterTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pageOf(visible, paging).map((n) => {
+            {page.rows.map((n) => {
               const h = n.expand?.holder
               const warning = h ? holderWarning(h) : null
               const isEditing = editingId === n.id
@@ -262,7 +263,7 @@ export function RegisterTable({
           </TableBody>
         </Table>
       </div>
-      <PagingBar paging={paging} noun="Nummern" />
+      <PagingBar view={page} noun="Nummern" />
     </div>
   )
 }

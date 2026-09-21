@@ -44,6 +44,9 @@ import { Field, Select } from './fields'
 import { euro } from './figures'
 import { describeRange, formatDay, gapsBetween } from './helpers'
 import { HoverCard } from './HoverCard'
+import { PagingBar } from './PagingBar'
+import { SearchInput } from './SearchInput'
+import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
 type Row = {
@@ -93,6 +96,7 @@ export function EventNumbers({
   const pools = usePoolsQuery(eventId)
   const poolIds = (pools.data ?? []).map((p) => p.id)
   const sellerNumbers = useEventSellerNumbersQuery(poolIds)
+  const paging = usePaging(`${eventId}|${filter.trim().toLowerCase()}|${String(onlyTaken)}`)
 
   if (!eventId) return <p className="text-muted-foreground text-sm">Kein Event in dieser Kategorie.</p>
   if (!pools.data || (poolIds.length > 0 && !sellerNumbers.data)) {
@@ -147,6 +151,7 @@ export function EventNumbers({
       (d?.sellerEmail ?? '').toLowerCase().includes(needle)
     )
   })
+  const page = pageOf(visible, paging)
   const registered = rows.filter((r) => r.sellerNumber?.sellerDetails).length
   const held = rows.filter((r) => r.sellerNumber && !r.sellerNumber.sellerDetails).length
   // A number nobody holds in the register's pool is not free — it is reserved range without
@@ -174,14 +179,7 @@ export function EventNumbers({
             ))}
           </Select>
         </Field>
-        <Input
-          placeholder="Nummer (genau), Name oder E-Mail…"
-          value={filter}
-          onChange={(e) => {
-            setFilter(e.target.value)
-          }}
-          className="max-w-xs"
-        />
+        <SearchInput placeholder="Nummer (genau), Name oder E-Mail…" value={filter} onChange={setFilter} />
         <label className="flex items-center gap-2 pb-2 text-sm">
           <input
             type="checkbox"
@@ -218,12 +216,13 @@ export function EventNumbers({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((r, index) => {
+            {page.rows.map((r, index) => {
               const s = r.sellerNumber
               const d = s?.expand?.sellerDetails
               const key = `${r.variationName}:${String(r.number)}`
               const isEditing = editingId === key
-              const previous = index > 0 ? visible[index - 1].number : null
+              const position = page.start + index
+              const previous = position > 0 ? visible[position - 1].number : null
               const skipped: number[] = []
               if (!needle && !onlyTaken && previous !== null) {
                 for (let n = previous + 1; n < r.number; n++) if (gapSet.has(n)) skipped.push(n)
@@ -352,6 +351,7 @@ export function EventNumbers({
           </TableBody>
         </Table>
       </div>
+      <PagingBar view={page} noun="Nummern" />
     </div>
   )
 }
