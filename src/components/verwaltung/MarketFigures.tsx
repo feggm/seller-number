@@ -31,7 +31,7 @@ import { WINDOW, euro, windowOf } from './figures'
 import { formatDay } from './helpers'
 
 const MATCH_LABEL = {
-  holder: { text: 'Halter:in', cls: 'text-emerald-700' },
+  holder: { text: 'Verkäufer:in', cls: 'text-emerald-700' },
   nameChange: { text: 'Namensänderung?', cls: 'text-amber-700' },
   mismatch: { text: 'andere Person', cls: 'text-red-700' },
 } as const
@@ -82,7 +82,7 @@ export function MarketFigures({
           </>
         ) : (
           <span className="text-muted-foreground">
-            {String(w.window.length)} von {WINDOW} Märkten unter dieser Halter:in — noch kein volles Fenster, keine Flag.
+            {String(w.window.length)} von {WINDOW} Märkten unter dieser Verkäufer:in — noch kein volles Fenster, keine Flag.
           </span>
         )}
         {number.reviewedAt && (
@@ -153,9 +153,9 @@ export function MarketFigures({
         </Table>
       </div>
       <p className="text-muted-foreground text-xs">
-        Nur Zeilen mit „Halter:in" zählen. War es dieselbe Person unter anderer Schreibweise (Spitzname,
+        Nur Zeilen mit „Verkäufer:in" zählen. War es dieselbe Person unter anderer Schreibweise (Spitzname,
         Geburtsname, Tippfehler in einer alten Liste), „dieselbe Person" drücken: die Schreibweise wird
-        bei der Halter:in hinterlegt, die Märkte zählen ab sofort, und der nächste Push rechnet die Flag nach.
+        bei der Verkäufer:in hinterlegt, die Märkte zählen ab sofort, und der nächste Push rechnet die Flag nach.
         Eine wirklich andere Person bleibt außen vor.
       </p>
     </div>

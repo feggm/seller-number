@@ -31,7 +31,7 @@ const EXPECTED_HEADERS = {
     'neu',
     'ma',
   ],
-  azb: ['nr', 'name', 'vorname', 'ab-status', 'tel', 'email', 'ma'],
+  azb: ['nr', 'name', 'vorname', 'ab-status', 'tel', 'email', 'ma', 'neu'],
 }
 
 // The consumer's `Personen` columns are VARCHAR(45); longer values are truncated or rejected
@@ -346,6 +346,7 @@ const toCsv = (assignment) => {
             escapeCsvValue(row.tel), // tel
             escapeCsvValue(row.email), // email
             row.ma ? 'M' : '', // ma
+            row.neu ? 'N' : '', // neu — trailing, so csv_import.py reads older files unchanged
           ]
     lines.push(cells.join(','))
   }

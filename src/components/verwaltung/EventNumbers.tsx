@@ -250,7 +250,7 @@ export function EventNumbers({
                     <TableCell className="text-sm">
                       {!s ? (
                         r.poolPermanent ? (
-                          <span className="text-muted-foreground" title={`${registerTerm} ohne Halter:in — im ${registerTerm}n-Pool, niemand kann sie buchen`}>
+                          <span className="text-muted-foreground" title={`${registerTerm} ohne Verkäufer:in — im ${registerTerm}n-Pool, niemand kann sie buchen`}>
                             {registerTerm} unbesetzt
                           </span>
                         ) : r.poolClosed ? (
