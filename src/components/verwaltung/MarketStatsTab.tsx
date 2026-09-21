@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { WINDOW, euro } from './figures'
+import { TOP_N, WINDOW, euro } from './figures'
 
 const fmt1 = (v: number | null) => (v === null ? '—' : v.toFixed(1).replace('.', ','))
 
@@ -46,6 +46,8 @@ export function MarketStatsTab({
   const byPerson = new Map<string, { appearances: TopSeller[]; numbers: Set<number> }>()
   for (const t of topSellers) {
     if (!lastMarkets.includes(t.market)) continue
+    // Rows pushed while the cut was wider are read at today's cut.
+    if (t.rankRevenue > TOP_N && t.rankItems > TOP_N) continue
     const key = `${t.firstNameHash}|${t.lastNameHash}`
     const entry = byPerson.get(key) ?? { appearances: [], numbers: new Set<number>() }
     entry.appearances.push(t)
@@ -130,7 +132,7 @@ export function MarketStatsTab({
         <h3 className="text-sm font-semibold">Kandidaten für eine {registerTerm}</h3>
         <p className="text-muted-foreground text-xs">
           Verkäufer:innen ohne {registerTerm}, die in den letzten {WINDOW} Märkten mehr als einmal unter den
-          Top 20 nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
+          Top {TOP_N} nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
           eine andere Nummer ziehen. Der Name kommt aus der Registrierung des neuesten Markts mit Event;
           für alte Märkte ohne Event gibt es nur die Nummer.
         </p>
@@ -141,7 +143,7 @@ export function MarketStatsTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">Top-20-Märkte</TableHead>
+                  <TableHead className="text-right">Top-{TOP_N}-Märkte</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>zuletzt</TableHead>
                   <TableHead>Märkte (bei Events mit Link zur Verkäuferliste)</TableHead>
