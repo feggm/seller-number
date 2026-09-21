@@ -286,3 +286,102 @@ export const useEventSellerNumbersQuery = (poolIds: string[]) =>
     staleTime: Infinity,
     enabled: poolIds.length > 0,
   })
+
+// ---------------------------------------------------------------------------
+// Market figures (§1.10): the four-market window per number, the market's medians, the
+// top sellers without a Dauernummer
+// ---------------------------------------------------------------------------
+
+export const NumberMarketSchema = z.object({
+  id: z.string(),
+  permanentNumber: z.string(),
+  market: z.string(),
+  event: z.string(),
+  holder: z.string(),
+  holderMatch: z.enum(['holder', 'nameChange', 'mismatch']),
+  itemsSold: z.number(),
+  revenueCents: z.number(),
+})
+export type NumberMarket = z.infer<typeof NumberMarketSchema>
+
+export const MarketStatsSchema = z.object({
+  id: z.string(),
+  eventCategory: z.string(),
+  market: z.string(),
+  event: z.string(),
+  sellers: z.number(),
+  itemsMean: z.number().nullable(),
+  itemsMedian: z.number().nullable(),
+  revenueCentsMean: z.number().nullable(),
+  revenueCentsMedian: z.number().nullable(),
+  permanentSellers: z.number(),
+  permanentItemsMean: z.number().nullable(),
+  permanentItemsMedian: z.number().nullable(),
+  permanentRevenueCentsMean: z.number().nullable(),
+  permanentRevenueCentsMedian: z.number().nullable(),
+})
+export type MarketStats = z.infer<typeof MarketStatsSchema>
+
+export const TopSellerSchema = z.object({
+  id: z.string(),
+  market: z.string(),
+  event: z.string(),
+  number: z.number(),
+  rankRevenue: z.number(),
+  rankItems: z.number(),
+  itemsSold: z.number(),
+  revenueCents: z.number(),
+  firstNameHash: z.string(),
+  lastNameHash: z.string(),
+})
+export type TopSeller = z.infer<typeof TopSellerSchema>
+
+/** "2026-Oct" → "2026-10", the sort key that puts markets in calendar order. */
+export const marketKey = (market: string) => {
+  const months: Record<string, string> = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' }
+  return `${market.slice(0, 4)}-${months[market.slice(5)] ?? '00'}`
+}
+
+export const useNumberMarketsQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'numberMarkets'],
+    queryFn: withErrorLogging(async function getAdminNumberMarketsQuery() {
+      return NumberMarketSchema.array().parse(
+        await pb.collection('permanentNumberMarkets').getFullList({
+          fields: fieldsOf(NumberMarketSchema),
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const useMarketStatsQuery = (categoryId: string) =>
+  useQuery({
+    queryKey: ['admin', 'marketStats', categoryId],
+    queryFn: withErrorLogging(async function getAdminMarketStatsQuery() {
+      return MarketStatsSchema.array().parse(
+        await pb.collection('marketStats').getFullList({
+          filter: pb.filter('eventCategory = {:categoryId}', { categoryId }),
+          fields: fieldsOf(MarketStatsSchema),
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled: categoryId !== '',
+  })
+
+export const useTopSellersQuery = (categoryId: string) =>
+  useQuery({
+    queryKey: ['admin', 'topSellers', categoryId],
+    queryFn: withErrorLogging(async function getAdminTopSellersQuery() {
+      return TopSellerSchema.array().parse(
+        await pb.collection('marketTopSellers').getFullList({
+          filter: pb.filter('eventCategory = {:categoryId}', { categoryId }),
+          fields: fieldsOf(TopSellerSchema),
+        })
+      )
+    }),
+    staleTime: Infinity,
+    enabled: categoryId !== '',
+  })

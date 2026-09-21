@@ -1,5 +1,7 @@
 import type {
   Holder,
+  MarketStats,
+  NumberMarket,
   NumberStatus,
   PermanentNumber,
   Variation,
@@ -25,6 +27,7 @@ import { toast } from 'sonner'
 
 import { Field, HolderFields, Select } from './fields'
 import { HistoryList } from './HistoryList'
+import { MarketFigures, euro, windowOf } from './MarketFigures'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
 
 const STATUS_LABEL: Record<NumberStatus, string> = {
@@ -45,27 +48,34 @@ export function RegisterTable({
   numbers,
   variations,
   holders,
+  markets,
+  stats,
 }: {
   numbers: PermanentNumber[]
   variations: Variation[]
   holders: Holder[]
+  markets: NumberMarket[]
+  stats: MarketStats[]
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
+  const [onlyFlagged, setOnlyFlagged] = useState(false)
+  const statsByMarket = new Map(stats.map((s) => [s.market, s]))
   const variationName = (id: string) =>
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
 
   const needle = filter.trim().toLowerCase()
-  const visible = needle
-    ? numbers.filter((n) => {
-        const h = n.expand?.holder
-        return (
-          String(n.permanentNumberNumber).includes(needle) ||
-          `${h?.holderFirstName ?? ''} ${h?.holderLastName ?? ''}`.toLowerCase().includes(needle) ||
-          (h?.holderEmail ?? '').toLowerCase().includes(needle)
-        )
-      })
-    : numbers
+  const visible = numbers.filter((n) => {
+    if (onlyFlagged && !n.reviewFlag) return false
+    if (!needle) return true
+    const h = n.expand?.holder
+    return (
+      String(n.permanentNumberNumber).includes(needle) ||
+      `${h?.holderFirstName ?? ''} ${h?.holderLastName ?? ''}`.toLowerCase().includes(needle) ||
+      (h?.holderEmail ?? '').toLowerCase().includes(needle)
+    )
+  })
+  const flaggedCount = numbers.filter((n) => n.reviewFlag).length
 
   return (
     <div className="space-y-3">
@@ -76,6 +86,10 @@ export function RegisterTable({
           onChange={(e) => { setFilter(e.target.value); }}
           className="max-w-xs"
         />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={onlyFlagged} onChange={(e) => { setOnlyFlagged(e.target.checked); }} />
+          nur mit Review-Flag ({String(flaggedCount)})
+        </label>
         <span className="text-muted-foreground text-sm">
           {visible.length} von {numbers.length} Nummern
         </span>
@@ -90,6 +104,7 @@ export function RegisterTable({
               <TableHead>Kontakt</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>seit</TableHead>
+              <TableHead>Ø letzte 4</TableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
@@ -147,6 +162,9 @@ export function RegisterTable({
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">{formatDay(n.heldSince) || '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      <WindowCell number={n} markets={markets} statsByMarket={statsByMarket} />
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         size="sm"
@@ -159,11 +177,13 @@ export function RegisterTable({
                   </TableRow>
                   {isEditing && h && (
                     <TableRow className="bg-slate-50">
-                      <TableCell colSpan={7} className="whitespace-normal">
+                      <TableCell colSpan={8} className="whitespace-normal">
                         <EditRow
                           number={n}
                           holder={h}
                           holders={holders}
+                          markets={markets}
+                          statsByMarket={statsByMarket}
                           onDone={() => { setEditingId(null); }}
                         />
                       </TableCell>
@@ -184,15 +204,47 @@ function RowGroup({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/** The window in one glance: means over the last four holder markets, and the flag. */
+function WindowCell({
+  number,
+  markets,
+  statsByMarket,
+}: {
+  number: PermanentNumber
+  markets: NumberMarket[]
+  statsByMarket: Map<string, MarketStats>
+}) {
+  const w = windowOf(number, markets, statsByMarket)
+  if (w.own.length === 0) return <span className="text-muted-foreground">—</span>
+  const items = w.itemsMean === null ? '—' : w.itemsMean.toFixed(1).replace('.', ',')
+  return (
+    <span className="flex flex-col">
+      <span className="tabular-nums">
+        {items} Teile · {euro(w.revenueMean === null ? null : Math.round(w.revenueMean))}
+        {!w.complete && <span className="text-muted-foreground"> ({String(w.window.length)}/4)</span>}
+      </span>
+      {number.reviewFlag && (
+        <span className="w-fit rounded bg-red-100 px-1.5 py-0.5 text-red-800" title="beide Mittel unter dem Median der letzten vier Märkte">
+          Review
+        </span>
+      )}
+    </span>
+  )
+}
+
 function EditRow({
   number,
   holder,
   holders,
+  markets,
+  statsByMarket,
   onDone,
 }: {
   number: PermanentNumber
   holder: Holder
   holders: Holder[]
+  markets: NumberMarket[]
+  statsByMarket: Map<string, MarketStats>
   onDone: () => void
 }) {
   const [holderInput, setHolderInput] = useState<HolderInput>(holderToInput(holder))
@@ -289,6 +341,11 @@ function EditRow({
         aus der nächsten Materialisierung; eine schon reservierte Nummer bleibt im Event und
         wird dort als <code>stale</code> gemeldet.
       </p>
+
+      <div className="space-y-2 border-t pt-3">
+        <h4 className="text-sm font-semibold">Marktzahlen</h4>
+        <MarketFigures number={number} rows={markets} statsByMarket={statsByMarket} />
+      </div>
 
       <div className="space-y-2 border-t pt-3">
         <h4 className="text-sm font-semibold">Verlauf</h4>
