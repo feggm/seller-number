@@ -166,6 +166,15 @@ const pushStatistics = (app, rawBody, { dryRun, now } = {}) => {
     notFound.status = 404
     throw notFound
   }
+  // The backfill knows no event ids; a market the app ran still has its event here. Resolve it
+  // by category and month, so the rows carry the event and the Verwaltung can lead from a
+  // number to the registration — exactly one event in that month, otherwise none.
+  if (!event) {
+    const month = marketKey(body.market) // YYYY-MM
+    const candidates = (app.findRecordsByFilter('events', 'eventCategory = {:categoryId}', '', 0, 0, { categoryId }) || [])
+      .filter((ev) => String(ev.get('eventDate') || '').slice(0, 7) === month)
+    if (candidates.length === 1) event = candidates[0]
+  }
 
   const variations = app.findRecordsByFilter('sellerNumberVariations', 'eventCategory = {:categoryId}', '', 0, 0, { categoryId }) || []
   const variationIds = variations.map((v) => v.get('id'))
