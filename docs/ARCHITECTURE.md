@@ -427,7 +427,8 @@ operator's call. No mail is sent. One transaction, `dryRun` rolls back.
   permanentSellers, permanent… }, numbers: [{ number, itemsSold, revenueCents, firstNameHash,
   lastNameHash, permanent }], topSellers: [{ number, rankRevenue, rankItems, itemsSold,
   revenueCents, firstNameHash, lastNameHash }] }` — `eventId` for a market the app ran,
-  `eventCategoryId` for the backfill of older markets; ≤ 2000 numbers, ≤ 100 top sellers
+  `eventCategoryId` for the backfill of older markets — a market whose month has exactly one
+  event of the category gets that event attached anyway; ≤ 2000 numbers, ≤ 100 top sellers
 - **Output**: `{ dryRun, mode, market, eventId, eventCategoryId, counts: { rows, created,
   updated, trimmed, ignored, ambiguous, holder, nameChange, mismatch, flagged, unflagged,
   topSellers }, flagged: [numbers], warnings }`
