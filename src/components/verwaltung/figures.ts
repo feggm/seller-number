@@ -46,6 +46,12 @@ export function windowOf(
     complete && itemsMean !== null && revenueMean !== null && itemsRef !== null && revenueRef !== null
       ? itemsMean < itemsRef && revenueMean < revenueRef
       : false
-  return { own, window, complete, itemsMean, revenueMean, itemsRef, revenueRef, flag }
+  // The decision holds until the window moves past the market it was taken for.
+  const newestMarket = window.length > 0 ? window[0].market : ''
+  const decisionCurrent =
+    number.reviewDecision === 'ok' &&
+    (number.reviewDecisionMarket === '' || marketKey(number.reviewDecisionMarket) >= marketKey(newestMarket))
+  const needsReview = number.reviewFlag && !decisionCurrent
+  return { own, window, complete, itemsMean, revenueMean, itemsRef, revenueRef, flag, newestMarket, decisionCurrent, needsReview }
 }
 

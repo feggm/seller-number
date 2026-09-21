@@ -109,7 +109,11 @@ the number outlive a market), `permanentNumberNumber` (number, required), `holde
 permanentNumberHolders, required), `status` (select: `aktiv` | `pausiert` | `freigegeben` |
 `gesperrt`), `heldSince` (date), `releasedAt` (date), `reviewFlag` (bool) / `reviewedAt` (date —
 the advisory flag the last statistics sync produced; the figures behind it live in
-`permanentNumberMarkets`)
+`permanentNumberMarkets`) · `reviewDecision` (select: `ok` — the operator's answer to the
+flag), `reviewDecidedAt` (date), `reviewDecisionMarket` (text `YYYY-Mon` — the newest window
+market the decision was taken for; the Verwaltung shows the flag again once the window has
+moved past it), `reviewNote` (text). Decisions arrive through record requests and land in
+`registerLog`.
 
 Unique index on `(sellerNumberVariation, permanentNumberNumber)` — the import is idempotent
 because of it. All API rules `null`. AZB staff numbers live here too, with `isStaff` on the

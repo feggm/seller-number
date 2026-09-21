@@ -17,6 +17,10 @@ const FIELD_LABEL: Record<string, string> = {
   holderContactChannel: 'Kontaktkanal',
   isStaff: 'Mitarbeiter:in',
   holderNote: 'Notiz',
+  holderAliases: 'Schreibweisen',
+  reviewDecision: 'Review',
+  reviewDecisionMarket: 'Review-Stand',
+  reviewNote: 'Review-Notiz',
 }
 
 const formatWhen = (iso: string) => {
@@ -37,7 +41,16 @@ export function HistoryList({
   const show = (field: string, value: unknown) => {
     if (value === '' || value === null || value === undefined) return '—'
     if (typeof value === 'boolean') return value ? 'ja' : 'nein'
+    if (field === 'reviewDecision') return value === 'ok' ? 'OK bestätigt' : '—'
     const text = typeof value === 'string' || typeof value === 'number' ? String(value) : JSON.stringify(value)
+    if (field === 'holderAliases') {
+      try {
+        const list = JSON.parse(text) as { firstName?: string; lastName?: string }[]
+        return list.map((a) => `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim() || '(Hash)').join(', ') || '—'
+      } catch {
+        return text
+      }
+    }
     if (field === 'holder') {
       const h = holders.find((x) => x.id === text)
       return h ? `${h.holderFirstName} ${h.holderLastName}` : text

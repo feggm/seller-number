@@ -71,6 +71,10 @@ export const PermanentNumberSchema = z.object({
   releasedAt: z.string(),
   reviewFlag: z.boolean(),
   reviewedAt: z.string(),
+  reviewDecision: z.enum(['ok']).or(z.literal('')).default(''),
+  reviewDecidedAt: z.string().default(''),
+  reviewDecisionMarket: z.string().default(''),
+  reviewNote: z.string().default(''),
   expand: z
     .object({ holder: HolderSchema.optional() })
     .optional(),
