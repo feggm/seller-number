@@ -264,10 +264,11 @@ export function EventNumbers({
                     <TableCell>{d ? `${d.sellerLastName}, ${d.sellerFirstName}` : ''}</TableCell>
                     <TableCell className="text-sm">
                       {d && (
-                        <div className="flex flex-col">
-                          <span>{d.sellerEmail || '—'}</span>
-                          {d.sellerPhone && <span className="text-muted-foreground text-xs">{d.sellerPhone}</span>}
-                        </div>
+                        <span title={[d.sellerEmail, d.sellerPhone].filter(Boolean).join(' · ') || undefined}>
+                          {[d.sellerEmail && 'E-Mail', d.sellerPhone && 'Telefon'].filter(Boolean).join(' + ') || (
+                            <span className="text-muted-foreground">keine Angabe</span>
+                          )}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
