@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { WINDOW, euro } from './MarketFigures'
+import { WINDOW, euro } from './figures'
 
 const fmt1 = (v: number | null) => (v === null ? '—' : v.toFixed(1).replace('.', ','))
 

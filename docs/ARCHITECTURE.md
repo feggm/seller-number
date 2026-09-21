@@ -417,7 +417,7 @@ there is no event and the register has exactly one row for the number (`ambiguou
 — gets its `permanentNumberMarkets` row for the market written or overwritten, with
 `holderMatch` from comparing the pushed hashes with the current holder (`holder` — both equal;
 `nameChange` — first name equal; `mismatch`); `holder` is set only on a match, so a number that
-changes hands starts the new person at zero. Then only the newest four rows per number and
+changes hands starts the new person at zero. Then only the newest eight rows per number and
 holder are kept, `marketStats` and `marketTopSellers` for the market are replaced, and every
 touched number's `reviewFlag` is recomputed: four `holder` rows of the current holder whose mean
 items and mean revenue both lie under the median of those four markets' medians (`marketStats`,
