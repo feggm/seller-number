@@ -202,7 +202,8 @@ const pushStatistics = (app, rawBody, { dryRun, now } = {}) => {
     const marketsCollection = txApp.findCollectionByNameOrId('permanentNumberMarkets')
     const statsCollection = txApp.findCollectionByNameOrId('marketStats')
     const topCollection = txApp.findCollectionByNameOrId('marketTopSellers')
-    const counts = { rows: 0, created: 0, updated: 0, trimmed: 0, ignored: 0, ambiguous: 0, holder: 0, nameChange: 0, mismatch: 0, flagged: 0, unflagged: 0, topSellers: 0 }
+    const sellersCollection = txApp.findCollectionByNameOrId('marketSellers')
+    const counts = { rows: 0, created: 0, updated: 0, trimmed: 0, ignored: 0, ambiguous: 0, holder: 0, nameChange: 0, mismatch: 0, flagged: 0, unflagged: 0, topSellers: 0, sellers: 0 }
     const warnings = []
     const touched = []
 
@@ -298,6 +299,21 @@ const pushStatistics = (app, rawBody, { dryRun, now } = {}) => {
       for (const field of ['number', 'rankRevenue', 'rankItems', 'itemsSold', 'revenueCents', 'firstNameHash', 'lastNameHash']) record.set(field, top[field])
       txApp.save(record)
       counts.topSellers += 1
+    }
+
+    // Every seller of the market, replaced as a whole: the person's trail across markets.
+    for (const old of txApp.findRecordsByFilter('marketSellers', 'eventCategory = {:categoryId} && market = {:market}', '', 0, 0, { categoryId, market: body.market }) || []) {
+      txApp.delete(old)
+    }
+    for (const row of body.numbers) {
+      if (!row.firstNameHash || !row.lastNameHash) continue
+      const record = new Record(sellersCollection)
+      record.set('eventCategory', categoryId)
+      record.set('market', body.market)
+      record.set('event', event ? event.get('id') : '')
+      for (const field of ['number', 'itemsSold', 'revenueCents', 'firstNameHash', 'lastNameHash']) record.set(field, row[field])
+      txApp.save(record)
+      counts.sellers += 1
     }
 
     // --- the advisory flag, per touched number ---------------------------------------------

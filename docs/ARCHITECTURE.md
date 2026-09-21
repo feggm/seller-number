@@ -141,6 +141,16 @@ leave the same trail; an update that changes nothing writes nothing. The registe
 instead. Append-only in spirit, superuser-only on all five rules; the Verwaltung page shows it
 as "Verlauf" per number. All API rules `null`.
 
+### 9b. marketSellers
+
+`eventCategory` (relation), `market` (text `YYYY-Mon`), `event` (relation, optional), `number`,
+`itemsSold`, `revenueCents`, `firstNameHash` / `lastNameHash`
+
+Every seller of a market as hash pair and figures — the whole `numbers` list of the statistics
+push, replaced per market. The person's trail across markets: a free seller draws another
+number every time, only the hash pair follows them. Read by
+`permanent-numbers/seller-history` for "neu dabei" / "dabei seit". No names. Superuser-only.
+
 ### 10. permanentNumberMarkets
 
 `permanentNumber` (relation, required, cascade delete), `market` (text `YYYY-Mon`, required),
@@ -435,6 +445,17 @@ items and mean revenue both lie under the median of those four markets' medians 
 this push's own row included); anything short of the full window clears the flag. Numbers the
 register does not know are ignored. One transaction, `dryRun` rolls back; a `syncLog` row of
 kind `permanent-numbers-statistics` carries the counters.
+
+### GET /api/seller-number/permanent-numbers/seller-history
+
+- **Auth**: superuser only (it starts from the registered names)
+- **Input**: `?eventId=`
+- **Output**: `{ eventId, sellers: [{ number, sellerNumberId, markets, firstMarket, lastMarket }] }`
+
+For every registration of the event: how many markets of the category the same person — the
+hash pair of the registered name under the exchange normalisation — appears in `marketSellers`,
+and the first and last of them. Zero means "neu dabei" as far as the register's trail reaches
+(the backfill's 30 markets, then every push).
 
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can
 authenticate (`/api/collections/apiClients/auth-with-password`, password auth only, 1 h tokens,
@@ -747,7 +768,12 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   pool gets a warning), Dauernummern in Event kopieren, Verkäuferliste, Pools (read-only
   overview of the event's pools), Marktzahlen (the category's `marketStats` per market and the
   candidates from `marketTopSellers` — a hash pair in the top 20 of more than one of the last
-  four markets). The Dauernummern table carries the four-market window and the stored
+  four markets, with a jump to the Verkäuferliste of the event where the name is), Sync-Log
+  (the last 200 `syncLog` rows of the category). The Pools tab creates or brings up to date the
+  register's pool of the next event from the aktiv numbers; the Verkäuferliste says per
+  registration "neu dabei" or "dabei seit <market> · n×" from `seller-history`; the copy report
+  frees a `stale` row on the spot; the Dauernummern table sorts by number, holder, status,
+  heldSince, mean items or mean revenue. The Dauernummern table carries the four-market window and the stored
   `reviewFlag`; the editor shows every `permanentNumberMarkets` row against the market's
   medians, recomputing the flag on read with the push's arithmetic:
   register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new

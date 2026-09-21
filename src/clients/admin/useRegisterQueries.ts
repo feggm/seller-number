@@ -402,3 +402,66 @@ export const useTopSellersQuery = (categoryId: string) =>
     staleTime: Infinity,
     enabled: categoryId !== '',
   })
+
+// ---------------------------------------------------------------------------
+// Sync log and seller history
+// ---------------------------------------------------------------------------
+
+export const SyncLogEntrySchema = z.object({
+  id: z.string(),
+  direction: z.enum(['in', 'out']),
+  kind: z.string(),
+  event: z.string(),
+  client: z.string(),
+  mode: z.string(),
+  checksum: z.string(),
+  rowCount: z.number().nullable(),
+  dryRun: z.boolean(),
+  status: z.enum(['ok', 'error']),
+  summary: z.unknown().nullable(),
+  ipAddress: z.string(),
+  startedAt: z.string(),
+  finishedAt: z.string(),
+})
+export type SyncLogEntry = z.infer<typeof SyncLogEntrySchema>
+
+export const useSyncLogQuery = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['admin', 'syncLog'],
+    queryFn: withErrorLogging(async function getAdminSyncLogQuery() {
+      const page = await pb.collection('syncLog').getList(1, 200, {
+        fields: fieldsOf(SyncLogEntrySchema),
+        sort: '-created',
+      })
+      return SyncLogEntrySchema.array().parse(page.items)
+    }),
+    staleTime: Infinity,
+    enabled,
+  })
+
+export const SellerHistorySchema = z.object({
+  eventId: z.string(),
+  sellers: z
+    .object({
+      number: z.number(),
+      sellerNumberId: z.string(),
+      markets: z.number(),
+      firstMarket: z.string().nullable(),
+      lastMarket: z.string().nullable(),
+    })
+    .array(),
+})
+export type SellerHistory = z.infer<typeof SellerHistorySchema>
+
+/** For every registration of the event: how many earlier markets the same person sold at. */
+export const useSellerHistoryQuery = (eventId: string) =>
+  useQuery({
+    queryKey: ['admin', 'sellerHistory', eventId],
+    queryFn: withErrorLogging(async function getAdminSellerHistoryQuery() {
+      return SellerHistorySchema.parse(
+        await pb.send<unknown>(`/api/seller-number/permanent-numbers/seller-history?eventId=${encodeURIComponent(eventId)}`, { method: 'GET' })
+      )
+    }),
+    staleTime: Infinity,
+    enabled: eventId !== '',
+  })

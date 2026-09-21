@@ -33,6 +33,8 @@ import { MarketFigures } from './MarketFigures'
 import { MarketTrend } from './MarketTrend'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
 
+type SortKey = 'number' | 'holder' | 'status' | 'heldSince' | 'items' | 'revenue'
+
 const STATUS_LABEL: Record<NumberStatus, string> = {
   aktiv: 'aktiv',
   pausiert: 'pausiert',
@@ -72,6 +74,7 @@ export function RegisterTable({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'number', dir: 1 })
   const statsByMarket = new Map(stats.map((s) => [s.market, s]))
   const variationName = (id: string) =>
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
@@ -89,6 +92,32 @@ export function RegisterTable({
     )
   })
   const flaggedCount = numbers.filter(needsReview).length
+  const sortValue = (n: PermanentNumber): string | number => {
+    const h = n.expand?.holder
+    switch (sort.key) {
+      case 'holder':
+        return `${h?.holderLastName ?? ''} ${h?.holderFirstName ?? ''}`.toLowerCase()
+      case 'status':
+        return n.status
+      case 'heldSince':
+        return n.heldSince
+      case 'items':
+        return windowOf(n, markets, statsByMarket).itemsMean ?? -1
+      case 'revenue':
+        return windowOf(n, markets, statsByMarket).revenueMean ?? -1
+      default:
+        return n.permanentNumberNumber
+    }
+  }
+  visible.sort((a, b) => {
+    const va = sortValue(a)
+    const vb = sortValue(b)
+    const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'de')
+    return (cmp || a.permanentNumberNumber - b.permanentNumberNumber) * sort.dir
+  })
+  const toggleSort = (key: SortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }))
+  }
 
   return (
     <div className="space-y-3">
@@ -124,13 +153,23 @@ export function RegisterTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">Nr.</TableHead>
+              <SortHead label="Nr." sortKey="number" sort={sort} onToggle={toggleSort} className="w-16" />
               <TableHead>Variation</TableHead>
-              <TableHead>Halter:in</TableHead>
+              <SortHead label="Halter:in" sortKey="holder" sort={sort} onToggle={toggleSort} />
               <TableHead>Kontakt</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>seit</TableHead>
-              <TableHead>Ø letzte 4</TableHead>
+              <SortHead label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
+              <SortHead label="seit" sortKey="heldSince" sort={sort} onToggle={toggleSort} />
+              <TableHead>
+                <span className="inline-flex gap-2">
+                  <button type="button" className="hover:underline" onClick={() => { toggleSort('items'); }}>
+                    Ø Teile{sort.key === 'items' && (sort.dir === 1 ? ' ▲' : ' ▼')}
+                  </button>
+                  <span className="text-muted-foreground">·</span>
+                  <button type="button" className="hover:underline" onClick={() => { toggleSort('revenue'); }}>
+                    Ø Umsatz{sort.key === 'revenue' && (sort.dir === 1 ? ' ▲' : ' ▼')}
+                  </button>
+                </span>
+              </TableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
@@ -224,6 +263,29 @@ export function RegisterTable({
         </Table>
       </div>
     </div>
+  )
+}
+
+function SortHead({
+  label,
+  sortKey,
+  sort,
+  onToggle,
+  className,
+}: {
+  label: string
+  sortKey: SortKey
+  sort: { key: SortKey; dir: 1 | -1 }
+  onToggle: (key: SortKey) => void
+  className?: string
+}) {
+  return (
+    <TableHead className={className}>
+      <button type="button" className="inline-flex items-center gap-1 hover:underline" onClick={() => { onToggle(sortKey); }}>
+        {label}
+        {sort.key === sortKey && <span aria-hidden>{sort.dir === 1 ? '▲' : '▼'}</span>}
+      </button>
+    </TableHead>
   )
 }
 
