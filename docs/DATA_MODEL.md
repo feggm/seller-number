@@ -178,7 +178,7 @@ erDiagram
   not a check in code, makes the register import idempotent. `permanentNumberHolders`,
   `permanentNumbers`, `permanentNumberMarkets`, `marketStats`, `marketTopSellers` and `syncLog`
   are superuser-only on all five rules.
-- `permanentNumberMarkets` keeps raw per-market figures (rolling four per number, kept by the
+- `permanentNumberMarkets` keeps raw per-market figures (rolling eight per number and holder, kept by the
   push); averages, medians and the trend are computed on read — no aggregate is stored twice.
 - Name hashes (`permanentNumberHolders`, `permanentNumberMarkets`, `marketTopSellers`) all use
   the one exchange normalisation in `permanent-numbers-core.js` (`normaliseName`): lowercase,

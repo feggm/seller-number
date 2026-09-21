@@ -27,7 +27,9 @@ import { toast } from 'sonner'
 
 import { Field, HolderFields, Select } from './fields'
 import { HistoryList } from './HistoryList'
-import { MarketFigures, euro, windowOf } from './MarketFigures'
+import { euro, windowOf } from './figures'
+import { MarketFigures } from './MarketFigures'
+import { MarketTrend } from './MarketTrend'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
 
 const STATUS_LABEL: Record<NumberStatus, string> = {
@@ -57,6 +59,7 @@ export function RegisterTable({
   markets: NumberMarket[]
   stats: MarketStats[]
 }) {
+  const categoryStats = stats
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
@@ -183,6 +186,7 @@ export function RegisterTable({
                           holder={h}
                           holders={holders}
                           markets={markets}
+                          stats={categoryStats}
                           statsByMarket={statsByMarket}
                           onDone={() => { setEditingId(null); }}
                         />
@@ -237,6 +241,7 @@ function EditRow({
   holder,
   holders,
   markets,
+  stats,
   statsByMarket,
   onDone,
 }: {
@@ -244,6 +249,7 @@ function EditRow({
   holder: Holder
   holders: Holder[]
   markets: NumberMarket[]
+  stats: MarketStats[]
   statsByMarket: Map<string, MarketStats>
   onDone: () => void
 }) {
@@ -344,6 +350,7 @@ function EditRow({
 
       <div className="space-y-2 border-t pt-3">
         <h4 className="text-sm font-semibold">Marktzahlen</h4>
+        <MarketTrend number={number} rows={markets} stats={stats} />
         <MarketFigures number={number} rows={markets} statsByMarket={statsByMarket} />
       </div>
 

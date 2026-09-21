@@ -11,7 +11,8 @@
 //      market predates the app (backfill);
 //   2. compare the hashes with the current holder: holder | nameChange | mismatch;
 //   3. write/overwrite the permanentNumberMarkets row for (number, market), then keep only the
-//      newest four rows per number and holder;
+//      newest eight rows per number and holder (the flag reads four, the Verwaltung draws
+//      eight);
 //   4. write marketStats and marketTopSellers for the market;
 //   5. compute the advisory reviewFlag for every touched number: four `holder` rows of the
 //      current holder whose mean items AND mean revenue both lie under the median of those
@@ -22,7 +23,8 @@ const MARKET_RE = /^\d{4}-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/
 const HASH_RE = /^[a-f0-9]{64}$/
 const ID_RE = /^[a-z0-9]{15}$/
 const MONTHS = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' }
-const WINDOW = 4
+const WINDOW = 4 // markets the review flag reads
+const KEEP = 8 // markets kept per number and holder — the Verwaltung's trend chart
 const MAX_NUMBERS = 2000
 const MAX_TOP = 100
 
@@ -258,7 +260,7 @@ const pushStatistics = (app, rawBody, { dryRun, now } = {}) => {
       touched.push({ register, holder, number: row.number, match })
     }
 
-    // --- keep the newest four rows per number and holder ---------------------------------
+    // --- keep the newest eight rows per number and holder --------------------------------
     for (const { register } of touched) {
       const rows = txApp.findRecordsByFilter('permanentNumberMarkets', 'permanentNumber = {:id}', '', 0, 0, { id: register.get('id') }) || []
       const byHolder = {}
@@ -269,7 +271,7 @@ const pushStatistics = (app, rawBody, { dryRun, now } = {}) => {
       }
       for (const group of Object.values(byHolder)) {
         group.sort((a, b) => marketKey(b.get('market')).localeCompare(marketKey(a.get('market'))))
-        for (const old of group.slice(WINDOW)) {
+        for (const old of group.slice(KEEP)) {
           txApp.delete(old)
           counts.trimmed += 1
         }
