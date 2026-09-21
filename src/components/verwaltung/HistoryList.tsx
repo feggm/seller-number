@@ -5,7 +5,7 @@ import { formatDay } from './helpers'
 
 const FIELD_LABEL: Record<string, string> = {
   status: 'Status',
-  holder: 'Verkäufer:in',
+  holder: 'Verkäufer',
   heldSince: 'seit',
   releasedAt: 'freigegeben am',
   permanentNumberNumber: 'Nummer',
@@ -15,7 +15,7 @@ const FIELD_LABEL: Record<string, string> = {
   holderEmail: 'E-Mail',
   holderPhone: 'Telefon',
   holderContactChannel: 'Kontaktkanal',
-  isStaff: 'Mitarbeiter:in',
+  isStaff: 'Mitarbeiter',
   holderNote: 'Notiz',
   holderAliases: 'Schreibweisen',
   reviewDecision: 'Review',

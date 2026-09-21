@@ -250,7 +250,7 @@ export function EventNumbers({
                     <TableCell className="text-sm">
                       {!s ? (
                         r.poolPermanent ? (
-                          <span className="text-muted-foreground" title={`${registerTerm} ohne Verkäufer:in — im ${registerTerm}n-Pool, niemand kann sie buchen`}>
+                          <span className="text-muted-foreground" title={`${registerTerm} ohne Verkäufer — im ${registerTerm}n-Pool, niemand kann sie buchen`}>
                             {registerTerm} unbesetzt
                           </span>
                         ) : r.poolClosed ? (
@@ -427,7 +427,7 @@ function EditRegistration({
             </Field>
             <label className="flex items-center gap-2 self-end pb-2 text-sm">
               <input type="checkbox" checked={input.isStaff} onChange={(e) => { set('isStaff', e.target.checked); }} disabled={busy} />
-              Mitarbeiter:in (<code>ma</code> im Export)
+              Mitarbeiter (<code>ma</code> im Export)
             </label>
             <Field label="E-Mail">
               <Input type="email" value={input.sellerEmail} onChange={(e) => { set('sellerEmail', e.target.value); }} disabled={busy} />

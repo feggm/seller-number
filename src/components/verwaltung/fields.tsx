@@ -104,7 +104,7 @@ export function HolderFields({
           onChange={(e) => { set('isStaff', e.target.checked); }}
           disabled={disabled}
         />
-        Mitarbeiter:in (<code>ma</code> im Export)
+        Mitarbeiter (<code>ma</code> im Export)
       </label>
       <Field label="Notiz" className="md:col-span-3">
         <Input

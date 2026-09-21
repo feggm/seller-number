@@ -161,7 +161,7 @@ export function RegisterTable({
             <TableRow>
               <SortHead label="Nr." sortKey="number" sort={sort} onToggle={toggleSort} className="w-16" />
               <TableHead>Variation</TableHead>
-              <SortHead label="Verkäufer:in" sortKey="holder" sort={sort} onToggle={toggleSort} />
+              <SortHead label="Verkäufer" sortKey="holder" sort={sort} onToggle={toggleSort} />
               <SortHead label="Kontakt" sortKey="contact" sort={sort} onToggle={toggleSort} />
               <SortHead label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
               <SortHead label="seit" sortKey="heldSince" sort={sort} onToggle={toggleSort} />
@@ -204,7 +204,7 @@ export function RegisterTable({
                           )}
                         </>
                       ) : (
-                        <span className="text-red-700">Verkäufer:in fehlt</span>
+                        <span className="text-red-700">Verkäufer fehlt</span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -433,7 +433,7 @@ function EditRow({
 
   const saveHolder = async () => {
     await updateHolder.mutateAsync({ id: holder.id, data: holderInput })
-    toast.success(`Verkäufer:in von Nr. ${String(number.permanentNumberNumber)} gespeichert`)
+    toast.success(`Verkäufer von Nr. ${String(number.permanentNumberNumber)} gespeichert`)
   }
 
   const saveNumber = async () => {
@@ -472,14 +472,14 @@ function EditRow({
           void saveHolder()
         }}
       >
-        <h4 className="text-sm font-semibold">Verkäufer:in bearbeiten</h4>
+        <h4 className="text-sm font-semibold">Verkäufer bearbeiten</h4>
         <HolderFields value={holderInput} onChange={setHolderInput} disabled={busy} />
         <p className="text-muted-foreground text-xs">
           Gilt für alle Nummern dieser Person. Eine bereits materialisierte Nummer zieht die
           Änderung beim nächsten „Materialisieren" nach.
         </p>
         <Button type="submit" size="sm" disabled={busy}>
-          Verkäufer:in speichern
+          Verkäufer speichern
         </Button>
         <span className="text-muted-foreground ml-3 text-xs">Enter speichert, Esc schließt ohne Speichern</span>
       </form>
@@ -578,7 +578,7 @@ function EditRow({
                 disabled={busy || !newHolderId}
                 onClick={() => void rehome(newHolderId)}
               >
-                Verkäufer:in wechseln
+                Verkäufer wechseln
               </Button>
             </div>
           </div>

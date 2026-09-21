@@ -153,7 +153,7 @@ export const useCreateNumberMutation = () =>
     }) {
       let holderId = input.holderId ?? ''
       if (!holderId) {
-        if (!input.newHolder) throw new Error('Verkäufer:in fehlt')
+        if (!input.newHolder) throw new Error('Verkäufer fehlt')
         const holder = HolderSchema.parse(
           await pb
             .collection('permanentNumberHolders')
