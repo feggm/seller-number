@@ -133,12 +133,15 @@ export function EventNumbers({
   const gapSet = new Set(gapsBetween(rows.map((r) => r.number)))
 
   const needle = filter.trim().toLowerCase()
+  // Digits mean a number, and a number matches whole — "12" is Nr. 12, not 112 or 120.
+  // Anything else searches name and e-mail of this event's registrations only.
+  const numberNeedle = /^\d+$/.test(needle) ? Number(needle) : null
   const visible = rows.filter((r) => {
     if (onlyTaken && !r.sellerNumber) return false
     if (!needle) return true
+    if (numberNeedle !== null) return r.number === numberNeedle
     const d = r.sellerNumber?.expand?.sellerDetails
     return (
-      String(r.number).includes(needle) ||
       `${d?.sellerFirstName ?? ''} ${d?.sellerLastName ?? ''}`.toLowerCase().includes(needle) ||
       (d?.sellerEmail ?? '').toLowerCase().includes(needle)
     )
@@ -171,7 +174,7 @@ export function EventNumbers({
           </Select>
         </Field>
         <Input
-          placeholder="Nummer, Name oder E-Mail suchen…"
+          placeholder="Nummer (genau), Name oder E-Mail…"
           value={filter}
           onChange={(e) => {
             setFilter(e.target.value)

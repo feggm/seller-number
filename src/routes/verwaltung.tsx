@@ -153,7 +153,9 @@ function Register({ categoryId }: { categoryId: string }) {
   const [section, setSection] = useState<Section>('register')
   // A jump into the Verkäuferliste from a candidate: event + number, and a nonce so the list
   // remounts even when the same target is opened twice.
-  const [eventTarget, setEventTarget] = useState<{ eventId: string; number: number; nonce: number } | null>(null)
+  // A jump from the candidates: that event, filtered on that number. Leaving the tab keeps the
+  // event and drops the filter — coming back shows the whole list.
+  const [eventTarget, setEventTarget] = useState<{ eventId: string; number: number | null; nonce: number } | null>(null)
 
   if (
     !categories.data ||
@@ -195,7 +197,10 @@ function Register({ categoryId }: { categoryId: string }) {
             key={key}
             size="sm"
             variant={section === key ? 'default' : 'outline'}
-            onClick={() => { setSection(key); }}
+            onClick={() => {
+              if (key !== section && section === 'event') setEventTarget((t) => (t ? { ...t, number: null, nonce: Date.now() } : null))
+              setSection(key)
+            }}
           >
             {label}
           </Button>
@@ -256,7 +261,7 @@ function Register({ categoryId }: { categoryId: string }) {
           registerNumbers={categoryNumbers}
           registerTerm={registerTerm}
           initialEventId={eventTarget?.eventId}
-          initialFilter={eventTarget ? String(eventTarget.number) : undefined}
+          initialFilter={eventTarget?.number == null ? undefined : String(eventTarget.number)}
         />
       )}
       {section === 'log' && <SyncLogTab key={selectedCategory} events={categoryEvents} />}
