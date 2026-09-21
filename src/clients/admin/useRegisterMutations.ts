@@ -94,6 +94,26 @@ export const useUpdateNumberMutation = () =>
     onSuccess: () => void invalidateRegister(),
   })
 
+/** The operator's answer to the review flag: "ok" with a note, taken for the newest market of
+ *  the window — or withdrawn. Logged like every register edit. */
+export const useReviewDecisionMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function reviewDecisionMutation(input: {
+      id: string
+      decision: 'ok' | ''
+      market: string
+      note: string
+    }) {
+      await pb.collection('permanentNumbers').update(input.id, {
+        reviewDecision: input.decision,
+        reviewDecidedAt: input.decision ? new Date().toISOString() : '',
+        reviewDecisionMarket: input.decision ? input.market : '',
+        reviewNote: input.decision ? input.note.trim() : '',
+      })
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
+
 /** "Dieselbe Person": a market row sold under another spelling becomes an alias of the holder,
  *  and every market row of the number with that hash pair counts as the holder's from now on.
  *  The stored review flag catches up with the next push; the page recomputes it on read. */

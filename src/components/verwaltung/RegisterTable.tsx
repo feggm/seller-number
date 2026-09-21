@@ -8,6 +8,7 @@ import type {
 } from '@/clients/admin/useRegisterQueries'
 import {
   useCreateHolderMutation,
+  useReviewDecisionMutation,
   useUpdateHolderMutation,
   useUpdateNumberMutation,
 } from '@/clients/admin/useRegisterMutations'
@@ -68,8 +69,9 @@ export function RegisterTable({
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
 
   const needle = filter.trim().toLowerCase()
+  const needsReview = (n: PermanentNumber) => windowOf(n, markets, statsByMarket).needsReview
   const visible = numbers.filter((n) => {
-    if (onlyFlagged && !n.reviewFlag) return false
+    if (onlyFlagged && !needsReview(n)) return false
     if (!needle) return true
     const h = n.expand?.holder
     return (
@@ -78,7 +80,7 @@ export function RegisterTable({
       (h?.holderEmail ?? '').toLowerCase().includes(needle)
     )
   })
-  const flaggedCount = numbers.filter((n) => n.reviewFlag).length
+  const flaggedCount = numbers.filter(needsReview).length
 
   return (
     <div className="space-y-3">
@@ -91,7 +93,7 @@ export function RegisterTable({
         />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={onlyFlagged} onChange={(e) => { setOnlyFlagged(e.target.checked); }} />
-          nur mit Review-Flag ({String(flaggedCount)})
+          nur offene Review ({String(flaggedCount)})
         </label>
         <span className="text-muted-foreground text-sm">
           {visible.length} von {numbers.length} Nummern
@@ -208,6 +210,77 @@ function RowGroup({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/** "Angesehen, bleibt": the operator's answer to the flag, with a note, for the current window.
+ *  Every decision is a register edit and lands in the Verlauf. */
+function ReviewDecision({
+  number,
+  markets,
+  statsByMarket,
+}: {
+  number: PermanentNumber
+  markets: NumberMarket[]
+  statsByMarket: Map<string, MarketStats>
+}) {
+  const [note, setNote] = useState(number.reviewNote)
+  const decide = useReviewDecisionMutation()
+  const w = windowOf(number, markets, statsByMarket)
+  if (!number.reviewFlag && number.reviewDecision === '') return null
+  const confirm = async () => {
+    await decide.mutateAsync({ id: number.id, decision: 'ok', market: w.newestMarket, note })
+    toast.success(`Nr. ${String(number.permanentNumberNumber)}: Review als OK bestätigt`)
+  }
+  const withdraw = async () => {
+    await decide.mutateAsync({ id: number.id, decision: '', market: '', note: '' })
+    toast.success(`Nr. ${String(number.permanentNumberNumber)}: Bestätigung zurückgenommen`)
+  }
+  return (
+    <div className="rounded-md border p-3 text-sm">
+      {number.reviewDecision === 'ok' ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <span>
+            ✓ Als <strong>OK</strong> bestätigt am {formatDay(number.reviewDecidedAt)}
+            {number.reviewDecisionMarket && ` für den Stand bis ${number.reviewDecisionMarket}`}
+            {number.reviewNote && <span className="text-muted-foreground"> — {number.reviewNote}</span>}
+          </span>
+          {!w.decisionCurrent && number.reviewFlag && (
+            <span className="rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">
+              seit {w.newestMarket} wieder unter dem Median — neu ansehen
+            </span>
+          )}
+          <Button size="sm" variant="outline" disabled={decide.isPending} onClick={() => void withdraw()}>
+            Bestätigung zurücknehmen
+          </Button>
+          {!w.decisionCurrent && (
+            <Button size="sm" disabled={decide.isPending} onClick={() => void confirm()}>
+              Erneut als OK bestätigen
+            </Button>
+          )}
+        </div>
+      ) : (
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void confirm()
+          }}
+        >
+          <Field label="Notiz zur Entscheidung (optional)" className="min-w-64 flex-1">
+            <Input value={note} onChange={(e) => { setNote(e.target.value); }} disabled={decide.isPending} placeholder="z. B. mit ihr gesprochen, bleibt dabei" />
+          </Field>
+          <Button type="submit" size="sm" disabled={decide.isPending}>
+            Review als OK bestätigen
+          </Button>
+        </form>
+      )}
+      <p className="text-muted-foreground mt-2 text-xs">
+        Die Flag bleibt Arithmetik und wird nach jedem Markt neu gerechnet; die Bestätigung gilt für den
+        Stand bis {w.newestMarket || '—'} und wird im Verlauf protokolliert. Kommt ein neuer Markt und
+        die Nummer liegt weiter unten, erscheint die Flag wieder.
+      </p>
+    </div>
+  )
+}
+
 /** The window in one glance: means over the last four holder markets, and the flag. */
 function WindowCell({
   number,
@@ -227,9 +300,14 @@ function WindowCell({
         {items} Teile · {euro(w.revenueMean === null ? null : Math.round(w.revenueMean))}
         {!w.complete && <span className="text-muted-foreground"> ({String(w.window.length)}/4)</span>}
       </span>
-      {number.reviewFlag && (
+      {w.needsReview && (
         <span className="w-fit rounded bg-red-100 px-1.5 py-0.5 text-red-800" title="beide Mittel unter dem Median der letzten vier Märkte">
           Review
+        </span>
+      )}
+      {number.reviewFlag && w.decisionCurrent && (
+        <span className="text-muted-foreground w-fit" title={`als OK bestätigt ${formatDay(number.reviewDecidedAt)}${number.reviewNote ? ` — ${number.reviewNote}` : ''}`}>
+          ✓ OK {formatDay(number.reviewDecidedAt)}
         </span>
       )}
     </span>
@@ -352,6 +430,7 @@ function EditRow({
         <h4 className="text-sm font-semibold">Marktzahlen</h4>
         <MarketTrend number={number} rows={markets} stats={stats} />
         <MarketFigures number={number} holder={holder} rows={markets} statsByMarket={statsByMarket} />
+        <ReviewDecision number={number} markets={markets} statsByMarket={statsByMarket} />
       </div>
 
       <div className="space-y-2 border-t pt-3">

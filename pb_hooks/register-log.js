@@ -5,7 +5,7 @@
 
 // The fields worth a diff; hashes and timestamps are derived, not edited.
 const LOGGED_FIELDS = {
-  permanentNumbers: ['sellerNumberVariation', 'permanentNumberNumber', 'holder', 'status', 'heldSince', 'releasedAt'],
+  permanentNumbers: ['sellerNumberVariation', 'permanentNumberNumber', 'holder', 'status', 'heldSince', 'releasedAt', 'reviewDecision', 'reviewDecisionMarket', 'reviewNote'],
   permanentNumberHolders: ['holderFirstName', 'holderLastName', 'holderEmail', 'holderPhone', 'holderContactChannel', 'isStaff', 'holderNote', 'holderAliases'],
   // An event's registrations, when the Verwaltung page edits or frees them.
   sellerDetails: ['sellerFirstName', 'sellerLastName', 'sellerEmail', 'sellerPhone', 'isStaff', 'permanentNumberHolder'],
