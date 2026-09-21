@@ -81,13 +81,15 @@ export function RegisterTable({
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
 
   const needle = filter.trim().toLowerCase()
+  // Digits mean one number, matched whole; anything else searches name and e-mail.
+  const numberNeedle = /^\d+$/.test(needle) ? Number(needle) : null
   const needsReview = (n: PermanentNumber) => windowOf(n, markets, statsByMarket).needsReview
   const visible = numbers.filter((n) => {
     if (onlyFlagged && !needsReview(n)) return false
     if (!needle) return true
+    if (numberNeedle !== null) return n.permanentNumberNumber === numberNeedle
     const h = n.expand?.holder
     return (
-      String(n.permanentNumberNumber).includes(needle) ||
       `${h?.holderFirstName ?? ''} ${h?.holderLastName ?? ''}`.toLowerCase().includes(needle) ||
       (h?.holderEmail ?? '').toLowerCase().includes(needle)
     )
@@ -124,7 +126,7 @@ export function RegisterTable({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Nummer, Name oder E-Mail suchen…"
+          placeholder="Nummer (genau), Name oder E-Mail…"
           value={filter}
           onChange={(e) => { setFilter(e.target.value); }}
           className="max-w-xs"
