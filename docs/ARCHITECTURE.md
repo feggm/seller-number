@@ -190,8 +190,8 @@ API rules `null`.
 optional), `number`, `rankRevenue`, `rankItems`, `itemsSold`, `revenueCents` (numbers),
 `firstNameHash` / `lastNameHash` (text, 64 hex)
 
-The strongest sellers *without* a Dauernummer per market — the top 10 by revenue and the top
-10 by items, union — pushed with the statistics. Dauernummer candidates are found by grouping
+The strongest sellers *without* a Dauernummer per market — the top 20 by revenue and the top
+20 by items, union — pushed with the statistics. Dauernummer candidates are found by grouping
 these rows by hash pair across markets (a seller gets a new number every market; the hashes
 recognise the person). For a market with an event the number resolves to the registration
 through the event's pools, so the report can show the name to a superuser. Kept for every
@@ -773,7 +773,7 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   Dauernummer anlegen (the number must lie in a pool of the next event; a number in the public
   pool gets a warning), Dauernummern in Event kopieren, Verkäuferliste, Pools (read-only
   overview of the event's pools), Marktzahlen (the category's `marketStats` per market and the
-  candidates from `marketTopSellers` — a hash pair in the top 10 of more than one of the last
+  candidates from `marketTopSellers` — a hash pair in the top 10 (top 20 on request) of more than one of the last
   four markets, with a jump to the Verkäuferliste of the event where the name is), Sync-Log
   (the last 200 `syncLog` rows of the category). The Pools tab creates or brings up to date the
   register's pool of the next event from the aktiv numbers; the Verkäuferliste says per

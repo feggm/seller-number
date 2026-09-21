@@ -5,8 +5,10 @@ import type {
 } from '@/clients/admin/useRegisterQueries'
 import { marketKey } from '@/clients/admin/useRegisterQueries'
 
-/** The candidate cut: top N by revenue or by items among the sellers without a Dauernummer. */
+/** The Kasse pushes the top 20 by revenue ∪ top 20 by items among the sellers without a
+ *  Dauernummer; the candidate view starts at the top 10 and opens up to the full 20. */
 export const TOP_N = 10
+export const TOP_N_ALL = 20
 export const WINDOW = 4
 
 export const euro = (cents: number | null | undefined) =>
