@@ -32,6 +32,7 @@ import { euro, windowOf } from './figures'
 import { MarketFigures } from './MarketFigures'
 import { MarketTrend } from './MarketTrend'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
+import { useEditRowKeys } from './useEditRowKeys'
 
 type SortKey = 'number' | 'holder' | 'status' | 'heldSince' | 'items' | 'revenue'
 
@@ -466,8 +467,10 @@ function EditRow({
     await rehome(created.id, `${created.holderFirstName} ${created.holderLastName}`)
   }
 
+  const keys = useEditRowKeys(onDone)
+
   return (
-    <div className="space-y-4 py-2">
+    <div className="space-y-4 py-2" ref={keys.ref} onKeyDown={keys.onKeyDown}>
       <form
         className="space-y-3"
         onSubmit={(e) => {
@@ -484,6 +487,7 @@ function EditRow({
         <Button type="submit" size="sm" disabled={busy}>
           Halter:in speichern
         </Button>
+        <span className="text-muted-foreground ml-3 text-xs">Enter speichert, Esc schließt ohne Speichern</span>
       </form>
 
       <div className="grid grid-cols-1 gap-3 border-t pt-3 md:grid-cols-[1fr_1fr_auto]">
