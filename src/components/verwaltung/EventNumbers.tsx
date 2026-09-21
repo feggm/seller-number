@@ -293,7 +293,7 @@ export function EventNumbers({
                         if (!history.data) return <span className="text-muted-foreground">…</span>
                         if (!hst || hst.markets === 0) {
                           return (
-                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800" title="dieser Name kommt in keinem früheren Markt der Kategorie vor">
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800" title="dieser Name kommt in keinem früheren Markt der Kategorie vor">
                               neu dabei
                             </span>
                           )
