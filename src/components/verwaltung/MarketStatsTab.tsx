@@ -62,7 +62,7 @@ export function MarketStatsTab({
         key: `${latest.firstNameHash}|${latest.lastNameHash}`,
         count: p.appearances.length,
         latest,
-        markets: sorted.map((a) => `${a.market}: Nr. ${String(a.number)} (${String(a.itemsSold)} Teile, ${euro(a.revenueCents)})`),
+        appearances: sorted,
         // The latest number, if it has become a Dauernummer since, says the candidate is done.
         alreadyRegistered: registerByNumber.get(latest.number)?.status === 'aktiv',
       }
@@ -133,7 +133,7 @@ export function MarketStatsTab({
                 <TableRow>
                   <TableHead className="text-right">Top-20-Märkte</TableHead>
                   <TableHead>zuletzt</TableHead>
-                  <TableHead>Märkte</TableHead>
+                  <TableHead>Märkte (bei Events mit Link zum Namen)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,7 +155,27 @@ export function MarketStatsTab({
                         </Button>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs whitespace-normal">{c.markets.join(' · ')}</TableCell>
+                    <TableCell className="text-xs whitespace-normal">
+                      {c.appearances.map((a, i) => (
+                        <span key={a.id}>
+                          {i > 0 && ' · '}
+                          {a.market}: Nr.{' '}
+                          {a.event ? (
+                            <button
+                              type="button"
+                              className="font-mono font-semibold underline decoration-dotted hover:text-sky-700"
+                              title={`Verkäuferliste ${eventName(a.event)} öffnen`}
+                              onClick={() => { onShowSeller(a.event, a.number); }}
+                            >
+                              {String(a.number)} ↗
+                            </button>
+                          ) : (
+                            <span className="font-mono">{String(a.number)}</span>
+                          )}{' '}
+                          ({String(a.itemsSold)} Teile, {euro(a.revenueCents)})
+                        </span>
+                      ))}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

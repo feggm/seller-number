@@ -161,12 +161,12 @@ export function RegisterTable({
               <SortHead label="seit" sortKey="heldSince" sort={sort} onToggle={toggleSort} />
               <TableHead>
                 <span className="inline-flex gap-2">
-                  <button type="button" className="hover:underline" onClick={() => { toggleSort('items'); }}>
-                    Ø Teile{sort.key === 'items' && (sort.dir === 1 ? ' ▲' : ' ▼')}
+                  <button type="button" className="rounded px-1 hover:bg-slate-100 hover:underline" title="sortieren" onClick={() => { toggleSort('items'); }}>
+                    Ø Teile <span aria-hidden className={sort.key === 'items' ? '' : 'text-muted-foreground/60'}>{sort.key === 'items' ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}</span>
                   </button>
                   <span className="text-muted-foreground">·</span>
-                  <button type="button" className="hover:underline" onClick={() => { toggleSort('revenue'); }}>
-                    Ø Umsatz{sort.key === 'revenue' && (sort.dir === 1 ? ' ▲' : ' ▼')}
+                  <button type="button" className="rounded px-1 hover:bg-slate-100 hover:underline" title="sortieren" onClick={() => { toggleSort('revenue'); }}>
+                    Ø Umsatz <span aria-hidden className={sort.key === 'revenue' ? '' : 'text-muted-foreground/60'}>{sort.key === 'revenue' ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}</span>
                   </button>
                 </span>
               </TableHead>
@@ -281,9 +281,16 @@ function SortHead({
 }) {
   return (
     <TableHead className={className}>
-      <button type="button" className="inline-flex items-center gap-1 hover:underline" onClick={() => { onToggle(sortKey); }}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 rounded px-1 hover:bg-slate-100 hover:underline"
+        title="sortieren"
+        onClick={() => { onToggle(sortKey); }}
+      >
         {label}
-        {sort.key === sortKey && <span aria-hidden>{sort.dir === 1 ? '▲' : '▼'}</span>}
+        <span aria-hidden className={sort.key === sortKey ? '' : 'text-muted-foreground/60'}>
+          {sort.key === sortKey ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}
+        </span>
       </button>
     </TableHead>
   )

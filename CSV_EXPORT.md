@@ -40,7 +40,7 @@ Exports with the following CSV columns:
 | `tel` | Phone number | ✅ Available |
 | `email` | Email address | ✅ Available |
 | `interesse_dnr` | Interest in permanent number | ⚠️ Always empty — the consumer never reads it |
-| `neu` | New seller flag | ⚠️ Always empty — determined on the consumer side against its own history |
+| `neu` | New seller flag | `N` when the registered name (hash pair, exchange normalisation) appears in no earlier market of the category in `marketSellers` — the trail the cash desk pushes after each market, back to 2013 through the backfill. Empty for everyone, with a `neu_unknown` warning in the envelope, while the category has no trail yet |
 | `ma` | Employee flag (Mitarbeiter) | ✅ `M` when `sellerDetails.isStaff` is set |
 
 ### AZB Mode (`mode=azb`)
