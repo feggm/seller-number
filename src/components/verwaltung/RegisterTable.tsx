@@ -204,7 +204,10 @@ export function RegisterTable({
                     <TableCell className="text-sm">
                       {h && (
                         <div className="flex flex-col">
-                          <span>{h.holderEmail || h.holderPhone || '—'}</span>
+                          <span title={h.holderEmail || h.holderPhone || undefined}>
+                            {h.holderContactChannel === 'whatsapp' ? 'WhatsApp' : 'E-Mail'}
+                            {!h.holderEmail && !h.holderPhone && <span className="text-muted-foreground"> · keine Angabe</span>}
+                          </span>
                           {warning && (
                             <span
                               className={
