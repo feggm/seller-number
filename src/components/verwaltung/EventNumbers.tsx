@@ -43,6 +43,7 @@ import { toast } from 'sonner'
 import { Field, Select } from './fields'
 import { euro } from './figures'
 import { describeRange, formatDay, gapsBetween } from './helpers'
+import { useEditRowKeys } from './useEditRowKeys'
 
 type Row = {
   number: number
@@ -396,8 +397,10 @@ function EditRegistration({
     onDone()
   }
 
+  const keys = useEditRowKeys(onDone)
+
   return (
-    <div className="space-y-4 py-2">
+    <div className="space-y-4 py-2" ref={keys.ref} onKeyDown={keys.onKeyDown}>
       {d ? (
         <form
           className="space-y-3"
@@ -433,6 +436,7 @@ function EditRegistration({
           <Button type="submit" size="sm" disabled={busy}>
             Registrierung speichern
           </Button>
+          <span className="text-muted-foreground ml-3 text-xs">Enter speichert, Esc schließt ohne Speichern</span>
         </form>
       ) : (
         <p className="text-sm">
