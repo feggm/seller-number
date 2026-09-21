@@ -110,6 +110,11 @@ const cleanBody = (body) => {
     }
   })
 
+  // Derived here, not trusted from the sender: the numbers are the truth about who sold.
+  const sold = numbers.filter((n) => n.itemsSold > 0 || n.revenueCents > 0)
+  stats.sellersSold = sold.length
+  stats.permanentSellersSold = sold.filter((n) => n.permanent).length
+
   const topIn = Array.isArray(body.topSellers) ? body.topSellers : []
   if (topIn.length > MAX_TOP) throw validationError(`topSellers: at most ${MAX_TOP} rows`)
   const topSellers = topIn.map((row, i) => {

@@ -96,7 +96,8 @@ export function MarketStatsTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>Markt</TableHead>
-                  <TableHead className="text-right">Verkäufer</TableHead>
+                  <TableHead className="text-right" title="angemeldete Verkaufsnummern mit Person">Verkäufer</TableHead>
+                  <TableHead className="text-right" title="davon mit mindestens einem verkauften Teil">davon verkauft</TableHead>
                   <TableHead className="text-right">Teile Ø / Median</TableHead>
                   <TableHead className="text-right">Umsatz Ø / Median</TableHead>
                   <TableHead className="text-right">{registerTerm}n</TableHead>
@@ -113,9 +114,24 @@ export function MarketStatsTab({
                       {m.event && <span className="text-muted-foreground ml-2 text-xs">{eventName(m.event)}</span>}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{m.sellers}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {m.sellersSold > 0 ? (
+                        <>
+                          {m.sellersSold}
+                          <span className="text-muted-foreground ml-1 text-xs">({String(Math.round((100 * m.sellersSold) / Math.max(1, m.sellers)))} %)</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground" title="kommt mit dem nächsten Push">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{fmt1(m.itemsMean)} / {fmt1(m.itemsMedian)}</TableCell>
                     <TableCell className="text-right tabular-nums">{euro(m.revenueCentsMean)} / {euro(m.revenueCentsMedian)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{m.permanentSellers}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {m.permanentSellers}
+                      {m.permanentSellersSold > 0 && m.permanentSellersSold < m.permanentSellers && (
+                        <span className="text-muted-foreground ml-1 text-xs" title="davon mit Verkauf">({m.permanentSellersSold})</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{fmt1(m.permanentItemsMean)} / {fmt1(m.permanentItemsMedian)}</TableCell>
                     <TableCell className="text-right tabular-nums">{euro(m.permanentRevenueCentsMean)} / {euro(m.permanentRevenueCentsMedian)}</TableCell>
                   </TableRow>
@@ -125,7 +141,8 @@ export function MarketStatsTab({
           </div>
         )}
         <p className="text-muted-foreground text-xs">
-          Die Review-Flag einer {registerTerm} vergleicht ihre letzten vier Märkte mit dem Median der
+          „Verkäufer" zählt die angemeldeten Nummern mit Person, „davon verkauft" die mit mindestens einem
+          verkauften Teil; Ø und Median rechnen über alle angemeldeten. Die Review-Flag einer {registerTerm} vergleicht ihre letzten vier Märkte mit dem Median der
           Mediane dieser vier Märkte (●). Zahlen kommen von der Kasse nach jedem Markt („Marktzahlen
           übertragen") und aus dem Backfill der alten Dumps.
         </p>

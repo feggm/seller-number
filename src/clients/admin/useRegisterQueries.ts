@@ -371,6 +371,9 @@ export const MarketStatsSchema = z.object({
   revenueCentsMean: z.number().nullable(),
   revenueCentsMedian: z.number().nullable(),
   permanentSellers: z.number(),
+  /** Of those, how many sold anything — 0 also on rows pushed before the field existed. */
+  sellersSold: z.number().default(0),
+  permanentSellersSold: z.number().default(0),
   permanentItemsMean: z.number().nullable(),
   permanentItemsMedian: z.number().nullable(),
   permanentRevenueCentsMean: z.number().nullable(),

@@ -125,11 +125,13 @@ erDiagram
         text market "YYYY-Mon, required"
         relation event FK "optional"
         number sellers
+        number sellersSold
         number itemsMean
         number itemsMedian
         number revenueCentsMean
         number revenueCentsMedian
         number permanentSellers
+        number permanentSellersSold
         number permanentItemsMean
         number permanentItemsMedian
         number permanentRevenueCentsMean
