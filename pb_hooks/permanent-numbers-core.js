@@ -103,6 +103,30 @@ const normaliseAliases = (raw, defaults = {}) => {
   return out
 }
 
+// Re-classify the market rows of this holder's numbers after the aliases changed: a pair
+// that became an alias now counts as the holder's, a pair that stopped being one falls back
+// to nameChange/mismatch. Same words as the push, so a removed alias is a real undo.
+const reclassifyMarketRows = (app, holder) => {
+  const holderId = holder.get('id')
+  const firstHash = holder.get('holderFirstNameHash') || ''
+  const numbers = app.findRecordsByFilter('permanentNumbers', 'holder = {:holderId}', '', 0, 0, { holderId }) || []
+  let changed = 0
+  for (const number of numbers) {
+    const rows = app.findRecordsByFilter('permanentNumberMarkets', 'permanentNumber = {:id}', '', 0, 0, { id: number.get('id') }) || []
+    for (const row of rows) {
+      const isHolder = holderHasHashes(holder, row.get('firstNameHash'), row.get('lastNameHash'))
+      const match = isHolder ? 'holder' : row.get('firstNameHash') === firstHash ? 'nameChange' : 'mismatch'
+      const owner = isHolder ? holderId : ''
+      if (row.get('holderMatch') === match && (row.get('holder') || '') === owner) continue
+      row.set('holderMatch', match)
+      row.set('holder', owner)
+      app.save(row)
+      changed += 1
+    }
+  }
+  return changed
+}
+
 // Does this hash pair name the holder — under the main spelling or one of the aliases?
 const holderHasHashes = (holder, firstNameHash, lastNameHash) => {
   if (holder.get('holderFirstNameHash') === firstNameHash && holder.get('holderLastNameHash') === lastNameHash) return true
@@ -706,6 +730,7 @@ module.exports = {
   applyHolderHashes,
   normaliseAliases,
   holderHasHashes,
+  reclassifyMarketRows,
   applyHolderContact,
   holderWarning,
   importRegister,

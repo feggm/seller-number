@@ -5,6 +5,17 @@ import type {
   PermanentNumber,
 } from '@/clients/admin/useRegisterQueries'
 import { useAcceptAliasMutation } from '@/clients/admin/useRegisterMutations'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -40,15 +51,16 @@ export function MarketFigures({
   const w = windowOf(number, rows, statsByMarket)
   const accept = useAcceptAliasMutation()
   const acceptRow = async (r: NumberMarket) => {
-    const n = await accept.mutateAsync({
+    await accept.mutateAsync({
       holderId: holder.id,
       currentAliases: holder.holderAliases,
       firstNameHash: r.firstNameHash,
       lastNameHash: r.lastNameHash,
-      permanentNumberId: number.id,
     })
-    toast.success(`Schreibweise übernommen — ${String(n)} Markt${n === 1 ? '' : 'e'} zählen jetzt für ${holder.holderFirstName} ${holder.holderLastName}`)
+    toast.success(`Schreibweise übernommen — die Märkte unter ihr zählen jetzt für ${holder.holderFirstName} ${holder.holderLastName}`)
   }
+  const sameSpelling = (r: NumberMarket) =>
+    w.own.filter((o) => o.firstNameHash === r.firstNameHash && o.lastNameHash === r.lastNameHash).map((o) => o.market)
   if (w.own.length === 0) {
     return <p className="text-muted-foreground text-xs">Noch keine Marktzahlen — kommen mit dem nächsten Push nach dem Markt.</p>
   }
@@ -108,15 +120,28 @@ export function MarketFigures({
                   <TableCell className={`text-xs ${MATCH_LABEL[r.holderMatch].cls}`}>{MATCH_LABEL[r.holderMatch].text}</TableCell>
                   <TableCell>
                     {r.holderMatch !== 'holder' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={accept.isPending}
-                        title="Dieser Markt lief unter einer anderen Schreibweise derselben Person: als Schreibweise übernehmen, dann zählt er"
-                        onClick={() => void acceptRow(r)}
-                      >
-                        dieselbe Person
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline" disabled={accept.isPending}>
+                            dieselbe Person
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Als Schreibweise von {holder.holderFirstName} {holder.holderLastName} übernehmen?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Wer im Markt {r.market} unter Nr. {String(number.permanentNumberNumber)} verkauft hat, gilt dann als
+                              dieselbe Person — und ebenso in {sameSpelling(r).join(', ')}. Diese Märkte zählen ab sofort für das
+                              Fenster und die Flag. Rückgängig: die Schreibweise oben bei „Weitere Schreibweisen" mit × entfernen
+                              und speichern; die Märkte fallen dann wieder heraus.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void acceptRow(r)}>Ja, dieselbe Person</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{s?.itemsMedian ?? '—'}</TableCell>

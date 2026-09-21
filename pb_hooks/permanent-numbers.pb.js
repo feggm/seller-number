@@ -196,6 +196,19 @@ onRecordUpdate((e) => {
   e.next()
 }, 'permanentNumberHolders')
 
+// When a holder's name or aliases change, the market rows of their numbers follow: an added
+// spelling pulls its markets in, a removed one lets them go again — so a wrong "dieselbe
+// Person" is undone by deleting the alias, and the next push finds nothing to disagree with.
+onRecordAfterUpdateSuccess((e) => {
+  const { reclassifyMarketRows } = require(`${__hooks}/permanent-numbers-core.js`)
+  try {
+    reclassifyMarketRows($app, e.record)
+  } catch (error) {
+    $app.logger().warn('permanentNumberHolders: could not reclassify market rows', 'error', error && error.message)
+  }
+  e.next()
+}, 'permanentNumberHolders')
+
 // Every edit by a person — Verwaltung page, admin UI, curl — leaves a registerLog row with the
 // fields that changed. The request hooks see the account; the register's own routes (import,
 // materialise) save through the app and land in syncLog instead. Never blocks the edit.
