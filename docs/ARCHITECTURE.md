@@ -345,6 +345,8 @@ Column layouts, response examples, and error payloads are documented in
 - `rows[].key` is the `sellerNumbers` id, `sellerDetailsId` the registration — together they
   let a consumer tell "same number, different person" from "same person, new number".
 - `event.yearMonth` is the month of `eventDate` in Europe/Berlin as `YYYY-Mon` — no DB field.
+- Mode `azb` has the header `nr,name,vorname,ab-status,tel,email,ma,neu` — `neu` trails since
+  22.09.2026 so a consumer reading the older seven columns is unaffected.
 - Warning codes: `duplicate_number` (one number from two pools of the event), `value_too_long`
   (name/vorname/tel/email over 45 characters), `unsafe_sql_char` (a backslash in a value),
   `missing_seller_details` (a registered number whose details record is gone; the row is skipped).
