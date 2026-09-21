@@ -4,7 +4,10 @@ import {
   useEventCategoriesQuery,
   useEventsQuery,
   useHoldersQuery,
+  useMarketStatsQuery,
+  useNumberMarketsQuery,
   usePermanentNumbersQuery,
+  useTopSellersQuery,
   useVariationsQuery,
 } from '@/clients/admin/useRegisterQueries'
 import { Button } from '@/components/ui/button'
@@ -13,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventNumbers } from '@/components/verwaltung/EventNumbers'
 import { Field, Select } from '@/components/verwaltung/fields'
+import { MarketStatsTab } from '@/components/verwaltung/MarketStatsTab'
 import { MaterialiseCard } from '@/components/verwaltung/MaterialiseCard'
 import { NewNumberForm } from '@/components/verwaltung/NewNumberForm'
 import { PoolsOverview } from '@/components/verwaltung/PoolsOverview'
@@ -134,14 +138,17 @@ function Login() {
   )
 }
 
-type Section = 'register' | 'new' | 'materialise' | 'event' | 'pools'
+type Section = 'register' | 'new' | 'materialise' | 'event' | 'pools' | 'stats'
 
 function Register({ categoryId }: { categoryId: string }) {
+  const marketStats = useMarketStatsQuery(categoryId)
+  const topSellers = useTopSellersQuery(categoryId)
   const categories = useEventCategoriesQuery(true)
   const variations = useVariationsQuery(true)
   const holders = useHoldersQuery(true)
   const numbers = usePermanentNumbersQuery(true)
   const events = useEventsQuery(true)
+  const numberMarkets = useNumberMarketsQuery(true)
   const [section, setSection] = useState<Section>('register')
 
   if (
@@ -176,6 +183,7 @@ function Register({ categoryId }: { categoryId: string }) {
             ['materialise', 'Dauernummern in Event kopieren'],
             ['event', 'Verkäuferliste'],
             ['pools', 'Pools'],
+            ['stats', 'Marktzahlen'],
           ] as const
         ).map(([key, label]) => (
           <Button
@@ -195,6 +203,8 @@ function Register({ categoryId }: { categoryId: string }) {
           numbers={categoryNumbers}
           variations={categoryVariations}
           holders={holders.data}
+          markets={numberMarkets.data ?? []}
+          stats={marketStats.data ?? []}
         />
       )}
       {section === 'new' && standardVariation && (
@@ -209,6 +219,16 @@ function Register({ categoryId }: { categoryId: string }) {
       )}
       {section === 'materialise' && (
         <MaterialiseCard key={selectedCategory} events={categoryEvents} registerTerm={registerTerm} />
+      )}
+      {section === 'stats' && (
+        <MarketStatsTab
+          key={selectedCategory}
+          stats={marketStats.data ?? []}
+          topSellers={topSellers.data ?? []}
+          events={categoryEvents}
+          registerNumbers={categoryNumbers}
+          registerTerm={registerTerm}
+        />
       )}
       {section === 'pools' && (
         <PoolsOverview

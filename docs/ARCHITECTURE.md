@@ -734,7 +734,11 @@ curl "http://localhost:8090/api/seller-number/cors-proxy?url=https://example.org
   (toggle in the header; a dropdown from four categories on) and five sections — Dauernummern,
   Dauernummer anlegen (the number must lie in a pool of the next event; a number in the public
   pool gets a warning), Dauernummern in Event kopieren, Verkäuferliste, Pools (read-only
-  overview of the event's pools):
+  overview of the event's pools), Marktzahlen (the category's `marketStats` per market and the
+  candidates from `marketTopSellers` — a hash pair in the top 20 of more than one of the last
+  four markets). The Dauernummern table carries the four-market window and the stored
+  `reviewFlag`; the editor shows every `permanentNumberMarkets` row against the market's
+  medians, recomputing the flag on read with the push's arithmetic:
   register table with inline edit (holder, status, `heldSince`, rehome to an existing or a new
   person, the number's and holder's "Verlauf" from `registerLog`), "Nummer anlegen", "In ein
   Event schreiben" with the classified report, and "Alle Nummern im Event": every number of
