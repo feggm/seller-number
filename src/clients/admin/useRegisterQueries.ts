@@ -448,6 +448,15 @@ export const SellerHistorySchema = z.object({
       markets: z.number(),
       firstMarket: z.string().nullable(),
       lastMarket: z.string().nullable(),
+      /** The last five markets, newest first — the number drawn there and what it sold. */
+      recent: z
+        .object({
+          market: z.string(),
+          number: z.number(),
+          itemsSold: z.number(),
+          revenueCents: z.number(),
+        })
+        .array(),
     })
     .array(),
 })
