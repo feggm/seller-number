@@ -155,7 +155,7 @@ export function MarketStatsTab({
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Kandidaten für eine {registerTerm}</h3>
         <p className="text-muted-foreground text-xs">
-          Verkäufer:innen ohne {registerTerm}, die in den letzten {WINDOW} Märkten mehr als einmal unter den
+          Verkäufer ohne {registerTerm}, die in den letzten {WINDOW} Märkten mehr als einmal unter den
           Top {cut} nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
           eine andere Nummer ziehen. Der Name kommt aus der Registrierung des neuesten Markts mit Event;
           für alte Märkte ohne Event gibt es nur die Nummer.
