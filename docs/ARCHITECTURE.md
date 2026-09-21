@@ -150,6 +150,9 @@ Every seller of a market as hash pair and figures — the whole `numbers` list o
 push, replaced per market. The person's trail across markets: a free seller draws another
 number every time, only the hash pair follows them. Read by
 `permanent-numbers/seller-history` for "neu dabei" / "dabei seit". No names. Superuser-only.
+The candidate list in the Marktzahlen tab does show names — read client-side from the
+`sellerNumbers` of the candidate's newest market with an event (superuser session), never
+from the statistics rows.
 
 ### 10. permanentNumberMarkets
 

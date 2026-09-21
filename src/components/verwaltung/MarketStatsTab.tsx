@@ -4,7 +4,7 @@ import type {
   PermanentNumber,
   TopSeller,
 } from '@/clients/admin/useRegisterQueries'
-import { marketKey } from '@/clients/admin/useRegisterQueries'
+import { marketKey, useEventRegistrationNamesQuery } from '@/clients/admin/useRegisterQueries'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -69,6 +69,16 @@ export function MarketStatsTab({
     })
     .sort((a, b) => b.count - a.count || b.latest.revenueCents - a.latest.revenueCents)
 
+  // The name comes from the registration of the newest market that has an event.
+  const names = useEventRegistrationNamesQuery(
+    candidates.flatMap((c) => c.appearances.filter((a) => a.event !== '').slice(0, 1).map((a) => a.event))
+  )
+  const nameOf = (c: (typeof candidates)[number]) => {
+    const withEvent = c.appearances.find((a) => a.event !== '')
+    if (!withEvent) return null
+    return { name: names.data?.get(`${withEvent.event}|${String(withEvent.number)}`) ?? null, appearance: withEvent }
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -121,8 +131,8 @@ export function MarketStatsTab({
         <p className="text-muted-foreground text-xs">
           Verkäufer:innen ohne {registerTerm}, die in den letzten {WINDOW} Märkten mehr als einmal unter den
           Top 20 nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
-          eine andere Nummer ziehen. Der Name steht in der Registrierung des jeweiligen Events
-          (Verkäuferliste → Nummer), für alte Märkte ohne Event nur die Nummer.
+          eine andere Nummer ziehen. Der Name kommt aus der Registrierung des neuesten Markts mit Event;
+          für alte Märkte ohne Event gibt es nur die Nummer.
         </p>
         {candidates.length === 0 ? (
           <p className="text-muted-foreground text-sm">Keine Kandidaten — oder noch zu wenig Märkte.</p>
@@ -132,8 +142,9 @@ export function MarketStatsTab({
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">Top-20-Märkte</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>zuletzt</TableHead>
-                  <TableHead>Märkte (bei Events mit Link zum Namen)</TableHead>
+                  <TableHead>Märkte (bei Events mit Link zur Verkäuferliste)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -141,19 +152,29 @@ export function MarketStatsTab({
                   <TableRow key={c.key} className={c.alreadyRegistered ? 'text-muted-foreground' : undefined}>
                     <TableCell className="text-right tabular-nums">{c.count} von {WINDOW}</TableCell>
                     <TableCell className="text-sm">
+                      {(() => {
+                        const n = nameOf(c)
+                        if (!n) return <span className="text-muted-foreground text-xs">nur alte Märkte ohne Event</span>
+                        if (!names.data) return <span className="text-muted-foreground">…</span>
+                        return n.name ? (
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="h-auto p-0 text-sm font-semibold"
+                            title={`Verkäuferliste ${eventName(n.appearance.event)} öffnen`}
+                            onClick={() => { onShowSeller(n.appearance.event, n.appearance.number); }}
+                          >
+                            {n.name}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs" title="Nummer im Event nicht mehr registriert">unbekannt</span>
+                        )
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm">
                       {c.latest.market}: Nr. <span className="font-mono font-semibold">{c.latest.number}</span>
                       {c.latest.event && <span className="text-muted-foreground ml-1 text-xs">{eventName(c.latest.event)}</span>}
                       {c.alreadyRegistered && <span className="ml-2 text-xs">inzwischen {registerTerm}</span>}
-                      {c.latest.event && (
-                        <Button
-                          size="sm"
-                          variant="link"
-                          className="h-auto px-2 py-0 text-xs"
-                          onClick={() => { onShowSeller(c.latest.event, c.latest.number); }}
-                        >
-                          Name in der Verkäuferliste
-                        </Button>
-                      )}
                     </TableCell>
                     <TableCell className="text-xs whitespace-normal">
                       {c.appearances.map((a, i) => (

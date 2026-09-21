@@ -302,6 +302,45 @@ export const useEventSellerNumbersQuery = (poolIds: string[]) =>
     enabled: poolIds.length > 0,
   })
 
+const EventRegistrationSchema = z.object({
+  sellerNumberNumber: z.number(),
+  expand: z
+    .object({
+      sellerNumberPool: z.object({ event: z.string() }).optional(),
+      sellerDetails: z.object({ sellerFirstName: z.string(), sellerLastName: z.string() }).optional(),
+    })
+    .optional(),
+})
+
+/** "event|number" → "Nachname, Vorname" for every registration of the given events — the
+ *  candidates in the Marktzahlen carry an event and a number, and the name is right there. */
+export const useEventRegistrationNamesQuery = (eventIds: string[]) => {
+  const ids = [...new Set(eventIds)].sort()
+  return useQuery({
+    queryKey: ['admin', 'registrationNames', ...ids],
+    queryFn: withErrorLogging(async function getAdminEventRegistrationNamesQuery() {
+      const filter = ids.map((_, i) => `sellerNumberPool.event = {:e${String(i)}}`).join(' || ')
+      const params = Object.fromEntries(ids.map((id, i) => [`e${String(i)}`, id]))
+      const rows = EventRegistrationSchema.array().parse(
+        await pb.collection('sellerNumbers').getFullList({
+          filter: pb.filter(`(${filter}) && sellerDetails != ""`, params),
+          expand: 'sellerNumberPool,sellerDetails',
+          fields: 'sellerNumberNumber,expand.sellerNumberPool.event,expand.sellerDetails.sellerFirstName,expand.sellerDetails.sellerLastName',
+        })
+      )
+      const names = new Map<string, string>()
+      for (const r of rows) {
+        const d = r.expand?.sellerDetails
+        const ev = r.expand?.sellerNumberPool?.event
+        if (d && ev) names.set(`${ev}|${String(r.sellerNumberNumber)}`, `${d.sellerLastName}, ${d.sellerFirstName}`)
+      }
+      return names
+    }),
+    staleTime: Infinity,
+    enabled: ids.length > 0,
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Market figures (§1.10): the four-market window per number, the market's medians, the
 // top sellers without a Dauernummer
