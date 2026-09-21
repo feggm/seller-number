@@ -451,11 +451,13 @@ kind `permanent-numbers-statistics` carries the counters.
 
 - **Auth**: superuser only (it starts from the registered names)
 - **Input**: `?eventId=`
-- **Output**: `{ eventId, sellers: [{ number, sellerNumberId, markets, firstMarket, lastMarket }] }`
+- **Output**: `{ eventId, sellers: [{ number, sellerNumberId, markets, firstMarket, lastMarket,
+  recent: [{ market, number, itemsSold, revenueCents }] }] }`
 
 For every registration of the event: how many markets of the category the same person — the
 hash pair of the registered name under the exchange normalisation — appears in `marketSellers`,
-and the first and last of them. Zero means "neu dabei" as far as the register's trail reaches
+the first and last of them, and the last five (newest first) with the number drawn there and
+its figures — the Verkäuferliste shows them on hover over "dabei seit". Zero means "neu dabei" as far as the register's trail reaches
 (the backfill's 30 markets, then every push).
 
 **`apiClients`** is an auth collection with every API rule `null`: a record in it can

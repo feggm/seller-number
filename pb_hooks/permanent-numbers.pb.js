@@ -181,8 +181,8 @@ routerAdd('POST', '/api/seller-number/permanent-numbers/statistics', (e) => {
 
 // GET /api/seller-number/permanent-numbers/seller-history?eventId= — for every registration
 // of the event: how many earlier markets of the category the same person (hash pair of the
-// registered name) sold at, and the first and last of them. Superuser only: it starts from
-// names. Nothing leaves but counts and market labels.
+// registered name) sold at, the first and last of them, and the last five with number and
+// figures. Superuser only: it starts from names. Nothing leaves but counts, labels and figures.
 routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
   const { nameHash } = require(`${__hooks}/permanent-numbers-core.js`)
   const { marketKey } = require(`${__hooks}/permanent-numbers-statistics.js`)
@@ -211,8 +211,14 @@ routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
   for (const s of $app.findRecordsByFilter('marketSellers', 'eventCategory = {:categoryId}', '', 0, 0, { categoryId }) || []) {
     const key = `${s.get('firstNameHash')}|${s.get('lastNameHash')}`
     if (!trail[key]) trail[key] = []
-    trail[key].push(s.get('market'))
+    trail[key].push({
+      market: s.get('market'),
+      number: s.get('number'),
+      itemsSold: s.get('itemsSold'),
+      revenueCents: s.get('revenueCents'),
+    })
   }
+  const RECENT = 5
 
   const sellers = []
   for (const row of rows) {
@@ -223,13 +229,14 @@ routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
       continue
     }
     const key = `${nameHash(details.get('sellerFirstName'))}|${nameHash(details.get('sellerLastName'))}`
-    const markets = (trail[key] || []).slice().sort((a, b) => marketKey(a).localeCompare(marketKey(b)))
+    const markets = (trail[key] || []).slice().sort((a, b) => marketKey(a.market).localeCompare(marketKey(b.market)))
     sellers.push({
       number: row.get('sellerNumberNumber'),
       sellerNumberId: row.get('id'),
       markets: markets.length,
-      firstMarket: markets.length ? markets[0] : null,
-      lastMarket: markets.length ? markets[markets.length - 1] : null,
+      firstMarket: markets.length ? markets[0].market : null,
+      lastMarket: markets.length ? markets[markets.length - 1].market : null,
+      recent: markets.slice(-RECENT).reverse(),
     })
   }
   return e.json(200, { eventId, sellers })
