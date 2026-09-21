@@ -43,6 +43,7 @@ import { toast } from 'sonner'
 import { Field, Select } from './fields'
 import { euro } from './figures'
 import { describeRange, formatDay, gapsBetween } from './helpers'
+import { HoverCard } from './HoverCard'
 import { useEditRowKeys } from './useEditRowKeys'
 
 type Row = {
@@ -305,21 +306,16 @@ export function EventNumbers({
                           )
                         }
                         return (
-                          <span className="group relative inline-block">
-                            <span className="cursor-help underline decoration-dotted" tabIndex={0}>
-                              {hst.firstMarket} · {String(hst.markets)}×
+                          <HoverCard trigger={<>{hst.firstMarket} · {String(hst.markets)}×</>}>
+                            <span className="text-muted-foreground mb-1 block">
+                              {hst.markets > hst.recent.length ? `die letzten ${String(hst.recent.length)} von ${String(hst.markets)} Märkten` : `${String(hst.markets)} frühere Märkte`}
                             </span>
-                            <span className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden min-w-max rounded-md border bg-white p-2 text-xs shadow-md group-hover:block group-focus-within:block">
-                              <span className="text-muted-foreground mb-1 block">
-                                {hst.markets > hst.recent.length ? `die letzten ${String(hst.recent.length)} von ${String(hst.markets)} Märkten` : `${String(hst.markets)} frühere Märkte`}
+                            {hst.recent.map((m) => (
+                              <span key={m.market} className="block tabular-nums whitespace-nowrap">
+                                <span className="font-mono">{m.market}</span> · Nr. <span className="font-mono">{String(m.number)}</span> · {String(m.itemsSold)} Teile, {euro(m.revenueCents)}
                               </span>
-                              {hst.recent.map((m) => (
-                                <span key={m.market} className="block tabular-nums whitespace-nowrap">
-                                  <span className="font-mono">{m.market}</span> · Nr. <span className="font-mono">{String(m.number)}</span> · {String(m.itemsSold)} Teile, {euro(m.revenueCents)}
-                                </span>
-                              ))}
-                            </span>
-                          </span>
+                            ))}
+                          </HoverCard>
                         )
                       })()}
                     </TableCell>
