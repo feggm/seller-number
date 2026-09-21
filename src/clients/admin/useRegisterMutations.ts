@@ -114,8 +114,9 @@ export const useReviewDecisionMutation = () =>
     onSuccess: () => void invalidateRegister(),
   })
 
-/** "Dieselbe Person": a market row sold under another spelling becomes an alias of the holder,
- *  and every market row of the number with that hash pair counts as the holder's from now on.
+/** "Dieselbe Person": a market row sold under another spelling becomes an alias of the holder.
+ *  The record hook on permanentNumberHolders then re-classifies the market rows of all the
+ *  holder's numbers — and does the reverse when the alias is removed again, which is the undo.
  *  The stored review flag catches up with the next push; the page recomputes it on read. */
 export const useAcceptAliasMutation = () =>
   useMutation({
@@ -124,30 +125,17 @@ export const useAcceptAliasMutation = () =>
       currentAliases: AliasInput[]
       firstNameHash: string
       lastNameHash: string
-      permanentNumberId: string
     }) {
       const already = input.currentAliases.some(
         (a) => a.firstNameHash === input.firstNameHash && a.lastNameHash === input.lastNameHash
       )
-      if (!already) {
-        await pb.collection('permanentNumberHolders').update(input.holderId, {
-          holderAliases: [
-            ...input.currentAliases,
-            { firstName: '', lastName: '', firstNameHash: input.firstNameHash, lastNameHash: input.lastNameHash },
-          ],
-        })
-      }
-      const rows = await pb.collection('permanentNumberMarkets').getFullList({
-        filter: pb.filter(
-          'permanentNumber = {:id} && firstNameHash = {:f} && lastNameHash = {:l}',
-          { id: input.permanentNumberId, f: input.firstNameHash, l: input.lastNameHash }
-        ),
-        fields: 'id',
+      if (already) return
+      await pb.collection('permanentNumberHolders').update(input.holderId, {
+        holderAliases: [
+          ...input.currentAliases,
+          { firstName: '', lastName: '', firstNameHash: input.firstNameHash, lastNameHash: input.lastNameHash },
+        ],
       })
-      for (const row of rows) {
-        await pb.collection('permanentNumberMarkets').update(row.id, { holderMatch: 'holder', holder: input.holderId })
-      }
-      return rows.length
     }),
     onSuccess: () => void invalidateRegister(),
   })
