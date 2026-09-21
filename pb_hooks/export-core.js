@@ -134,6 +134,23 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
     throw exportError(404, 'No seller number pools found for this event')
   }
 
+  // `neu`: a seller whose name (hash pair, exchange normalisation) appears in no earlier
+  // market of the category. The trail is marketSellers — every seller of every market the
+  // cash desk pushed, back to 2013 through the backfill. Markets from this event's month on
+  // are left out, so a push that already happened cannot make everyone "seen". An empty
+  // trail says nothing, so then nobody is new and the consumer gets a warning.
+  const { nameHash } = require(`${__hooks}/permanent-numbers-core.js`)
+  const { marketKey } = require(`${__hooks}/permanent-numbers-statistics.js`)
+  const eventMonth = String(event.get('eventDate') || '').slice(0, 7) // YYYY-MM
+  const seen = new Set()
+  if (category) {
+    for (const s of findOrEmpty('marketSellers', 'eventCategory = {:categoryId}', '', { categoryId: category.get('id') })) {
+      if (eventMonth && marketKey(s.get('market')) >= eventMonth) continue
+      seen.add(`${s.get('firstNameHash')}|${s.get('lastNameHash')}`)
+    }
+  }
+  const trailKnown = seen.size > 0
+
   const variationIds = [...new Set(pools.map((pool) => pool.get('sellerNumberVariation')))].filter(
     (id) => !!id
   )
@@ -163,6 +180,9 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
   }
 
   const warnings = []
+  if (!trailKnown) {
+    warnings.push({ code: 'neu_unknown', message: 'no market trail for this category yet (marketSellers empty) — neu is left empty' })
+  }
   const rows = []
   const seenNumbers = {}
 
@@ -188,10 +208,8 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
       // Set only on rows the Dauernummer register materialised (permanent-numbers-core.js).
       dnr: !!details.get('permanentNumberHolder'),
       babynr: isBabyVariation(variation),
-      // Deliberately never derived here: "first market for this seller" is a question about
-      // fifteen years of history the cash-desk side holds (hash comparison per event category).
-      // PocketBase only remembers events since 2025 and would call almost everyone new.
-      neu: false,
+      // First market for this person, as far as the trail reaches (see above).
+      neu: trailKnown && !seen.has(`${nameHash(details.get('sellerFirstName'))}|${nameHash(details.get('sellerLastName'))}`),
       ma: !!details.get('isStaff'),
       name: String(details.get('sellerLastName') || ''),
       vorname: String(details.get('sellerFirstName') || ''),
