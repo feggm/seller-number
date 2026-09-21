@@ -5,6 +5,8 @@ import type {
 } from '@/clients/admin/useRegisterQueries'
 import { marketKey } from '@/clients/admin/useRegisterQueries'
 
+/** The candidate cut: top N by revenue or by items among the sellers without a Dauernummer. */
+export const TOP_N = 10
 export const WINDOW = 4
 
 export const euro = (cents: number | null | undefined) =>
