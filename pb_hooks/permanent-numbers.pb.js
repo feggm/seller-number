@@ -181,8 +181,9 @@ routerAdd('POST', '/api/seller-number/permanent-numbers/statistics', (e) => {
 
 // GET /api/seller-number/permanent-numbers/seller-history?eventId= — for every registration
 // of the event: how many earlier markets of the category the same person (hash pair of the
-// registered name) sold at, the first and last of them, and the last five with number and
-// figures. Superuser only: it starts from names. Nothing leaves but counts, labels and figures.
+// registered name) sold at, the first and last of them, and every one of them with number and
+// figures, newest first. Superuser only: it starts from names. Nothing leaves but counts,
+// labels and figures.
 routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
   const { nameHash } = require(`${__hooks}/permanent-numbers-core.js`)
   const { marketKey } = require(`${__hooks}/permanent-numbers-statistics.js`)
@@ -218,7 +219,6 @@ routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
       revenueCents: s.get('revenueCents'),
     })
   }
-  const RECENT = 5
 
   const sellers = []
   for (const row of rows) {
@@ -236,7 +236,7 @@ routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
       markets: markets.length,
       firstMarket: markets.length ? markets[0].market : null,
       lastMarket: markets.length ? markets[markets.length - 1].market : null,
-      recent: markets.slice(-RECENT).reverse(),
+      trail: markets.slice().reverse(),
     })
   }
   return e.json(200, { eventId, sellers })

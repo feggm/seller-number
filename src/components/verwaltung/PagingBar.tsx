@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button'
 
-import { PAGE, type PageView } from './usePaging'
+import { type PageView } from './usePaging'
 
 /** The bar under a paged list; nothing when the list fits on one page. */
 export function PagingBar({ view: v, noun }: { view: PageView<unknown>; noun: string }) {
-  if (v.total <= PAGE) return null
+  if (v.total <= v.state.size) return null
   const s = v.state
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -12,7 +12,7 @@ export function PagingBar({ view: v, noun }: { view: PageView<unknown>; noun: st
         <>
           <span className="text-muted-foreground">alle {String(v.total)} {noun}</span>
           <Button size="sm" variant="outline" onClick={() => { s.setAll(false); }}>
-            je {String(PAGE)}
+            je {String(v.state.size)}
           </Button>
         </>
       ) : (
