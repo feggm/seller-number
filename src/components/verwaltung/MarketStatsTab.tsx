@@ -15,7 +15,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { TOP_N, WINDOW, euro } from './figures'
+import { useState } from 'react'
+
+import { TOP_N, TOP_N_ALL, WINDOW, euro } from './figures'
 
 const fmt1 = (v: number | null) => (v === null ? '—' : v.toFixed(1).replace('.', ','))
 
@@ -37,6 +39,8 @@ export function MarketStatsTab({
   /** Open the Verkäuferliste of that event on that number — where the name is. */
   onShowSeller: (eventId: string, number: number) => void
 }) {
+  const [showAll, setShowAll] = useState(false)
+  const cut = showAll ? TOP_N_ALL : TOP_N
   const markets = [...stats].sort((a, b) => marketKey(b.market).localeCompare(marketKey(a.market)))
   const eventName = (id: string) => events.find((e) => e.id === id)?.eventName ?? ''
   const lastMarkets = markets.slice(0, WINDOW).map((m) => m.market)
@@ -46,8 +50,7 @@ export function MarketStatsTab({
   const byPerson = new Map<string, { appearances: TopSeller[]; numbers: Set<number> }>()
   for (const t of topSellers) {
     if (!lastMarkets.includes(t.market)) continue
-    // Rows pushed while the cut was wider are read at today's cut.
-    if (t.rankRevenue > TOP_N && t.rankItems > TOP_N) continue
+    if (t.rankRevenue > cut && t.rankItems > cut) continue
     const key = `${t.firstNameHash}|${t.lastNameHash}`
     const entry = byPerson.get(key) ?? { appearances: [], numbers: new Set<number>() }
     entry.appearances.push(t)
@@ -132,10 +135,13 @@ export function MarketStatsTab({
         <h3 className="text-sm font-semibold">Kandidaten für eine {registerTerm}</h3>
         <p className="text-muted-foreground text-xs">
           Verkäufer:innen ohne {registerTerm}, die in den letzten {WINDOW} Märkten mehr als einmal unter den
-          Top {TOP_N} nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
+          Top {cut} nach Umsatz oder Teilen waren — über die Namens-Hashes erkannt, weil sie jeden Markt
           eine andere Nummer ziehen. Der Name kommt aus der Registrierung des neuesten Markts mit Event;
           für alte Märkte ohne Event gibt es nur die Nummer.
         </p>
+        <Button size="sm" variant="outline" onClick={() => { setShowAll((v) => !v); }}>
+          {showAll ? `nur Top ${String(TOP_N)}` : `mehr … (Top ${String(TOP_N_ALL)})`}
+        </Button>
         {candidates.length === 0 ? (
           <p className="text-muted-foreground text-sm">Keine Kandidaten — oder noch zu wenig Märkte.</p>
         ) : (
@@ -143,7 +149,7 @@ export function MarketStatsTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">Top-{TOP_N}-Märkte</TableHead>
+                  <TableHead className="text-right">Top-{cut}-Märkte</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>zuletzt</TableHead>
                   <TableHead>Märkte (bei Events mit Link zur Verkäuferliste)</TableHead>
