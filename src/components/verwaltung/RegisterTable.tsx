@@ -33,6 +33,7 @@ import { MarketFigures } from './MarketFigures'
 import { MarketTrend } from './MarketTrend'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
 import { PagingBar } from './PagingBar'
+import { SearchInput } from './SearchInput'
 import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
@@ -132,12 +133,7 @@ export function RegisterTable({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Nummer (genau), Name oder E-Mail…"
-          value={filter}
-          onChange={(e) => { setFilter(e.target.value); }}
-          className="max-w-xs"
-        />
+        <SearchInput placeholder="Nummer (genau), Name oder E-Mail…" value={filter} onChange={setFilter} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={onlyFlagged} onChange={(e) => { setOnlyFlagged(e.target.checked); }} />
           nur offene Review ({String(flaggedCount)})
