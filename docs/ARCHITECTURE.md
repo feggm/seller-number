@@ -97,7 +97,14 @@ copy; the connection count exists only in Go process memory and is otherwise unr
 (text), `holderContactChannel` (select: `email` | `whatsapp`, required — the address is required on
 the e-mail channel, enforced by the record hook; a WhatsApp holder without a phone number is
 kept and reported as `noContactOnFile`), `holderFirstNameHash` / `holderLastNameHash` (text, 64 hex — sha256 of
-the normalised name, kept current by a record hook), `isStaff` (bool), `holderNote` (text)
+the normalised name, kept current by a record hook), `isStaff` (bool), `holderNote` (text),
+`holderAliases` (json: `[{ firstName, lastName, firstNameHash, lastNameHash }]` — the other
+spellings this person sold under; the hook fills the hashes from the names, a half-given alias
+inherits the holder's own hash for the missing half, a hash-only entry taken over from a market
+row is kept as is; the statistics push counts a market under any alias as the holder's, and
+`onRecordAfterUpdateSuccess` re-classifies the market rows of the holder's numbers whenever the
+names or aliases change — adding an alias pulls its markets in, removing it lets them go, which
+is the undo)
 
 The durable person behind a Dauernummer. `sellerDetails` is a per-event artefact; this is the
 identity the register keeps across markets. All API rules `null`.
@@ -419,8 +426,8 @@ The post-market statistics sync (`permanent-numbers-statistics.js`). Every numbe
 register row — resolved through the event's pools, or through the category's variations when
 there is no event and the register has exactly one row for the number (`ambiguous` otherwise)
 — gets its `permanentNumberMarkets` row for the market written or overwritten, with
-`holderMatch` from comparing the pushed hashes with the current holder (`holder` — both equal;
-`nameChange` — first name equal; `mismatch`); `holder` is set only on a match, so a number that
+`holderMatch` from comparing the pushed hashes with the current holder (`holder` — both equal,
+or equal to one of the holder's aliases; `nameChange` — first name equal; `mismatch`); `holder` is set only on a match, so a number that
 changes hands starts the new person at zero. Then only the newest eight rows per number and
 holder are kept, `marketStats` and `marketTopSellers` for the market are replaced, and every
 touched number's `reviewFlag` is recomputed: four `holder` rows of the current holder whose mean
