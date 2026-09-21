@@ -1,6 +1,7 @@
 import type {
   Event,
   PermanentNumber,
+  SellerHistoryEntry,
   SellerNumber,
   Variation,
 } from '@/clients/admin/useRegisterQueries'
@@ -44,6 +45,7 @@ import { Field, Select } from './fields'
 import { euro } from './figures'
 import { describeRange, formatDay, gapsBetween } from './helpers'
 import { HoverCard } from './HoverCard'
+import { SellerTrail } from './SellerTrail'
 import { PagingBar } from './PagingBar'
 import { SearchInput } from './SearchInput'
 import { pageOf, usePaging } from './usePaging'
@@ -59,6 +61,9 @@ type Row = {
   sellerNumber?: SellerNumber
   registerNumber?: PermanentNumber
 }
+
+/** How many of the person's markets the "dabei seit" hover shows; the edit row shows them all. */
+const HOVER_MARKETS = 5
 
 const fmtWhen = (iso: string) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(iso)
@@ -307,9 +312,9 @@ export function EventNumbers({
                         return (
                           <HoverCard trigger={<>{hst.firstMarket} · {String(hst.markets)}×</>}>
                             <span className="text-muted-foreground mb-1 block">
-                              {hst.markets > hst.recent.length ? `die letzten ${String(hst.recent.length)} von ${String(hst.markets)} Märkten` : `${String(hst.markets)} frühere Märkte`}
+                              {hst.markets > HOVER_MARKETS ? `die letzten ${String(HOVER_MARKETS)} von ${String(hst.markets)} Märkten — alle unter „Bearbeiten"` : `${String(hst.markets)} frühere Märkte`}
                             </span>
-                            {hst.recent.map((m) => (
+                            {hst.trail.slice(0, HOVER_MARKETS).map((m) => (
                               <span key={m.market} className="block tabular-nums whitespace-nowrap">
                                 <span className="font-mono">{m.market}</span> · Nr. <span className="font-mono">{String(m.number)}</span> · {String(m.itemsSold)} Teile, {euro(m.revenueCents)}
                               </span>
@@ -338,6 +343,7 @@ export function EventNumbers({
                         <EditRegistration
                           row={r}
                           sellerNumber={s}
+                          history={historyByNumber.get(r.number)}
                           onDone={() => {
                             setEditingId(null)
                           }}
@@ -364,10 +370,13 @@ function RowGroup({ children }: { children: React.ReactNode }) {
 function EditRegistration({
   row,
   sellerNumber,
+  history,
   onDone,
 }: {
   row: Row
   sellerNumber: SellerNumber
+  /** The person's markets from seller-history — undefined while it loads or without registration. */
+  history?: SellerHistoryEntry
   onDone: () => void
 }) {
   const d = sellerNumber.expand?.sellerDetails
@@ -442,6 +451,8 @@ function EditRegistration({
           Reservierung ohne Registrierung seit {fmtWhen(sellerNumber.reservedAt)} — läuft von selbst ab oder wird hier freigegeben.
         </p>
       )}
+
+      {d && history && history.markets > 0 && <SellerTrail history={history} />}
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-3">
         <AlertDialog>

@@ -490,8 +490,8 @@ export const SellerHistorySchema = z.object({
       markets: z.number(),
       firstMarket: z.string().nullable(),
       lastMarket: z.string().nullable(),
-      /** The last five markets, newest first — the number drawn there and what it sold. */
-      recent: z
+      /** Every market of the person, newest first — the number drawn there and what it sold. */
+      trail: z
         .object({
           market: z.string(),
           number: z.number(),
@@ -503,6 +503,7 @@ export const SellerHistorySchema = z.object({
     .array(),
 })
 export type SellerHistory = z.infer<typeof SellerHistorySchema>
+export type SellerHistoryEntry = SellerHistory['sellers'][number]
 
 /** For every registration of the event: how many earlier markets the same person sold at. */
 export const useSellerHistoryQuery = (eventId: string) =>
