@@ -351,7 +351,7 @@ function EditRow({
       <div className="space-y-2 border-t pt-3">
         <h4 className="text-sm font-semibold">Marktzahlen</h4>
         <MarketTrend number={number} rows={markets} stats={stats} />
-        <MarketFigures number={number} rows={markets} statsByMarket={statsByMarket} />
+        <MarketFigures number={number} holder={holder} rows={markets} statsByMarket={statsByMarket} />
       </div>
 
       <div className="space-y-2 border-t pt-3">

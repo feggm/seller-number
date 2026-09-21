@@ -28,6 +28,14 @@ export type Variation = z.infer<typeof VariationSchema>
 export const ContactChannelSchema = z.enum(['email', 'whatsapp'])
 export type ContactChannel = z.infer<typeof ContactChannelSchema>
 
+export const AliasSchema = z.object({
+  firstName: z.string().default(''),
+  lastName: z.string().default(''),
+  firstNameHash: z.string(),
+  lastNameHash: z.string(),
+})
+export type Alias = z.infer<typeof AliasSchema>
+
 export const HolderSchema = z.object({
   id: z.string(),
   holderFirstName: z.string(),
@@ -39,6 +47,9 @@ export const HolderSchema = z.object({
   ),
   isStaff: z.boolean(),
   holderNote: z.string(),
+  holderFirstNameHash: z.string().default(''),
+  holderLastNameHash: z.string().default(''),
+  holderAliases: AliasSchema.array().nullable().transform((v) => v ?? []),
 })
 export type Holder = z.infer<typeof HolderSchema>
 
@@ -298,6 +309,8 @@ export const NumberMarketSchema = z.object({
   market: z.string(),
   event: z.string(),
   holder: z.string(),
+  firstNameHash: z.string(),
+  lastNameHash: z.string(),
   holderMatch: z.enum(['holder', 'nameChange', 'mismatch']),
   itemsSold: z.number(),
   revenueCents: z.number(),

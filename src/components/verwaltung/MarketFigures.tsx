@@ -1,8 +1,12 @@
 import type {
+  Holder,
   MarketStats,
   NumberMarket,
   PermanentNumber,
 } from '@/clients/admin/useRegisterQueries'
+import { useAcceptAliasMutation } from '@/clients/admin/useRegisterMutations'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -24,14 +28,27 @@ const MATCH_LABEL = {
 /** One number's markets, newest first, against the market's medians. */
 export function MarketFigures({
   number,
+  holder,
   rows,
   statsByMarket,
 }: {
   number: PermanentNumber
+  holder: Holder
   rows: NumberMarket[]
   statsByMarket: Map<string, MarketStats>
 }) {
   const w = windowOf(number, rows, statsByMarket)
+  const accept = useAcceptAliasMutation()
+  const acceptRow = async (r: NumberMarket) => {
+    const n = await accept.mutateAsync({
+      holderId: holder.id,
+      currentAliases: holder.holderAliases,
+      firstNameHash: r.firstNameHash,
+      lastNameHash: r.lastNameHash,
+      permanentNumberId: number.id,
+    })
+    toast.success(`Schreibweise übernommen — ${String(n)} Markt${n === 1 ? '' : 'e'} zählen jetzt für ${holder.holderFirstName} ${holder.holderLastName}`)
+  }
   if (w.own.length === 0) {
     return <p className="text-muted-foreground text-xs">Noch keine Marktzahlen — kommen mit dem nächsten Push nach dem Markt.</p>
   }
@@ -71,6 +88,7 @@ export function MarketFigures({
               <TableHead className="text-right">Teile</TableHead>
               <TableHead className="text-right">Umsatz</TableHead>
               <TableHead>verkauft von</TableHead>
+              <TableHead></TableHead>
               <TableHead className="text-right">Markt-Median Teile</TableHead>
               <TableHead className="text-right">Markt-Median Umsatz</TableHead>
             </TableRow>
@@ -88,6 +106,19 @@ export function MarketFigures({
                   <TableCell className="text-right tabular-nums">{r.itemsSold}</TableCell>
                   <TableCell className="text-right tabular-nums">{euro(r.revenueCents)}</TableCell>
                   <TableCell className={`text-xs ${MATCH_LABEL[r.holderMatch].cls}`}>{MATCH_LABEL[r.holderMatch].text}</TableCell>
+                  <TableCell>
+                    {r.holderMatch !== 'holder' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={accept.isPending}
+                        title="Dieser Markt lief unter einer anderen Schreibweise derselben Person: als Schreibweise übernehmen, dann zählt er"
+                        onClick={() => void acceptRow(r)}
+                      >
+                        dieselbe Person
+                      </Button>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{s?.itemsMedian ?? '—'}</TableCell>
                   <TableCell className="text-right tabular-nums">{euro(s?.revenueCentsMedian)}</TableCell>
                 </TableRow>
@@ -97,8 +128,10 @@ export function MarketFigures({
         </Table>
       </div>
       <p className="text-muted-foreground text-xs">
-        Nur Zeilen mit „Halter:in" zählen — eine andere Person unter derselben Nummer, auch eine
-        abweichende Schreibweise in alten Seeds, bleibt sichtbar, aber außen vor.
+        Nur Zeilen mit „Halter:in" zählen. War es dieselbe Person unter anderer Schreibweise (Spitzname,
+        Geburtsname, Tippfehler in einer alten Liste), „dieselbe Person" drücken: die Schreibweise wird
+        bei der Halter:in hinterlegt, die Märkte zählen ab sofort, und der nächste Push rechnet die Flag nach.
+        Eine wirklich andere Person bleibt außen vor.
       </p>
     </div>
   )

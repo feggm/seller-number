@@ -113,6 +113,83 @@ export function HolderFields({
           disabled={disabled}
         />
       </Field>
+      <div className="md:col-span-3">
+        <AliasFields
+          value={value.holderAliases}
+          onChange={(aliases) => { set('holderAliases', aliases); }}
+          disabled={disabled}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Other spellings the person sold under — nickname, maiden name, a typo in an old seed. The
+ *  statistics count a market under any of them as this person's. An alias taken over from a
+ *  market row carries only its hash pair and shows as such. */
+function AliasFields({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: HolderInput['holderAliases']
+  onChange: (next: HolderInput['holderAliases']) => void
+  disabled?: boolean
+}) {
+  const [first, setFirst] = React.useState('')
+  const [last, setLast] = React.useState('')
+  const add = () => {
+    if (!first.trim() && !last.trim()) return
+    onChange([...value, { firstName: first.trim(), lastName: last.trim(), firstNameHash: '', lastNameHash: '' }])
+    setFirst('')
+    setLast('')
+  }
+  return (
+    <div className="space-y-2">
+      <span className="text-muted-foreground text-xs">
+        Weitere Schreibweisen (Spitzname, Geburtsname, Tippfehler in alten Listen) — Märkte unter diesem
+        Namen zählen als diese Person
+      </span>
+      {value.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {value.map((a, i) => (
+            <li key={`${a.firstNameHash}${a.firstName}|${a.lastNameHash}${a.lastName}`} className="flex items-center gap-1 rounded border px-2 py-0.5 text-sm">
+              {a.firstName || a.lastName ? (
+                <span>{a.firstName} {a.lastName}</span>
+              ) : (
+                <span className="text-muted-foreground" title={`${a.firstNameHash.slice(0, 8)}… / ${a.lastNameHash.slice(0, 8)}…`}>
+                  aus Marktzeile übernommen
+                </span>
+              )}
+              <button
+                type="button"
+                className="text-muted-foreground ml-1 hover:text-red-700"
+                title="entfernen"
+                disabled={disabled}
+                onClick={() => { onChange(value.filter((_, j) => j !== i)); }}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Vorname">
+          <Input value={first} onChange={(e) => { setFirst(e.target.value); }} disabled={disabled} className="w-40" />
+        </Field>
+        <Field label="Nachname">
+          <Input value={last} onChange={(e) => { setLast(e.target.value); }} disabled={disabled} className="w-40" />
+        </Field>
+        <button
+          type="button"
+          className="border-input h-9 rounded-md border px-3 text-sm hover:bg-slate-50 disabled:opacity-50"
+          disabled={disabled === true || (!first.trim() && !last.trim())}
+          onClick={add}
+        >
+          Schreibweise hinzufügen
+        </button>
+      </div>
     </div>
   )
 }

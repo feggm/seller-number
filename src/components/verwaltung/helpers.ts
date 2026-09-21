@@ -19,6 +19,7 @@ export const emptyHolderInput = (): HolderInput => ({
   holderContactChannel: 'email',
   isStaff: false,
   holderNote: '',
+  holderAliases: [],
 })
 
 export const holderToInput = (holder: Holder): HolderInput => ({
@@ -29,6 +30,7 @@ export const holderToInput = (holder: Holder): HolderInput => ({
   holderContactChannel: holder.holderContactChannel,
   isStaff: holder.isStaff,
   holderNote: holder.holderNote,
+  holderAliases: holder.holderAliases,
 })
 
 export const formatDay = (dbDate: string) => {
