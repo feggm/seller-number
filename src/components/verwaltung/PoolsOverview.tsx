@@ -1,10 +1,13 @@
-import type { Event, Variation } from '@/clients/admin/useRegisterQueries'
+import type { Event, PermanentNumber, Variation } from '@/clients/admin/useRegisterQueries'
 import {
   resolveNumbers,
   useEventSellerNumbersQuery,
   usePoolsQuery,
 } from '@/clients/admin/useRegisterQueries'
+import { useEnsurePermanentPoolMutation } from '@/clients/admin/useRegisterMutations'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -25,12 +28,15 @@ import { describeRange, formatDay, gapsBetween } from './helpers'
 export function PoolsOverview({
   events,
   variations,
+  registerNumbers,
   registerTerm,
 }: {
   events: Event[]
   variations: Variation[]
+  registerNumbers: PermanentNumber[]
   registerTerm: string
 }) {
+  const ensure = useEnsurePermanentPoolMutation()
   const today = new Date().toISOString().slice(0, 10)
   const upcoming = events.filter((e) => e.eventDate.slice(0, 10) >= today)
   const [eventId, setEventId] = useState(
@@ -50,6 +56,24 @@ export function PoolsOverview({
   const takenByKey = new Map(
     (sellerNumbers.data ?? []).map((s) => [`${s.sellerNumberPool}:${String(s.sellerNumberNumber)}`, s])
   )
+  // What the register's pool of each variation should hold: the aktiv numbers. Compared with
+  // the flagged pool of the event, if there is one; numbers found in a public pool are the
+  // operator's to move.
+  const isPast = (events.find((e) => e.id === eventId)?.eventDate.slice(0, 10) ?? '') < today
+  const wanted = new Map<string, number[]>()
+  for (const n of registerNumbers) {
+    if (n.status !== 'aktiv') continue
+    wanted.set(n.sellerNumberVariation, [...(wanted.get(n.sellerNumberVariation) ?? []), n.permanentNumberNumber])
+  }
+  const poolTasks = [...wanted.entries()].map(([variationId, numbers]) => {
+    const permanent = pools.data.find((p) => p.sellerNumberVariation === variationId && p.isPermanentPool)
+    const have = permanent ? resolveNumbers(permanent.numbersAsJsonArray) : []
+    const missing = numbers.filter((n) => !have.includes(n))
+    const inPublic = numbers.filter((n) =>
+      pools.data.some((p) => p.sellerNumberVariation === variationId && !p.isPermanentPool && resolveNumbers(p.numbersAsJsonArray).includes(n))
+    )
+    return { variationId, variationName: variationName(variationId), numbers, permanent, have, missing, inPublic }
+  })
   const rows = pools.data.map((pool) => {
     const numbers = resolveNumbers(pool.numbersAsJsonArray)
     const closed = pool.obtainableTo !== '' && pool.obtainableTo.slice(0, 10) < today
@@ -148,8 +172,59 @@ export function PoolsOverview({
           im Publikums-Pool außerdem die aktiven Dauernummern, die im 🔒-Pool liegen.
         </p>
       )}
+      {!isPast && poolTasks.length > 0 && (
+        <div className="space-y-2 rounded-md border p-3">
+          <h4 className="text-sm font-semibold">{registerTerm}n-Pool dieses Events</h4>
+          {poolTasks.map((t) => (
+            <div key={t.variationId} className="flex flex-wrap items-center gap-3 text-sm">
+              <span>
+                {t.variationName}: {String(t.numbers.length)} aktive {registerTerm}n
+                {t.permanent ? (
+                  t.missing.length === 0 ? (
+                    <span className="text-emerald-700"> — alle im 🔒-Pool</span>
+                  ) : (
+                    <span className="text-amber-700"> — {String(t.missing.length)} fehlen im 🔒-Pool: {describeRange(t.missing)}</span>
+                  )
+                ) : (
+                  <span className="text-amber-700"> — noch kein 🔒-Pool</span>
+                )}
+                {t.inPublic.length > 0 && (
+                  <span className="text-red-700"> · im Publikums-Pool: {describeRange(t.inPublic)} — dort herausnehmen, sonst geht die Nummer an jemand anderen</span>
+                )}
+              </span>
+              {(!t.permanent || t.missing.length > 0) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={ensure.isPending}
+                  onClick={() => {
+                    void ensure
+                      .mutateAsync({
+                        eventId,
+                        variationId: t.variationId,
+                        numbers: t.numbers,
+                        existingPoolId: t.permanent?.id,
+                        existingNumbers: t.have,
+                      })
+                      .then((r) => {
+                        toast.success(r.created ? `${registerTerm}n-Pool angelegt (${String(r.numbers)} Nummern)` : `${registerTerm}n-Pool nachgezogen (${String(r.numbers)} Nummern)`)
+                      })
+                  }}
+                >
+                  {t.permanent ? 'Pool nachziehen' : 'Pool anlegen'}
+                </Button>
+              )}
+            </div>
+          ))}
+          <p className="text-muted-foreground text-xs">
+            Legt den Pool mit genau den aktiven Nummern an (Häkchen <code>isPermanentPool</code>, Buchungsfenster in der
+            Vergangenheit) oder ergänzt fehlende Nummern. Aus einem Pool genommen wird hier nichts — eine pausierte oder
+            freigegebene Nummer bleibt drin, bis du sie in PocketBase entfernst.
+          </p>
+        </div>
+      )}
       <p className="text-muted-foreground text-xs">
-        Pools werden noch in der PocketBase-Admin-UI angelegt. Ein {registerTerm}n-Pool trägt dort das Häkchen
+        Publikums-Pools werden noch in der PocketBase-Admin-UI angelegt. Ein {registerTerm}n-Pool trägt dort das Häkchen
         <code> isPermanentPool</code> und ein <code>obtainableTo</code> in der Vergangenheit: niemand kann daraus
         buchen, nur „Dauernummern in Event kopieren" trägt ein.
       </p>

@@ -187,6 +187,8 @@ export const MaterialiseResultSchema = z.object({
   changedFields: z.string().array().optional(),
   registeredName: z.string().optional(),
   holderId: z.string().nullable().optional(),
+  sellerNumberId: z.string().optional(),
+  sellerDetailsId: z.string().optional(),
 })
 export type MaterialiseResult = z.infer<typeof MaterialiseResultSchema>
 
@@ -262,6 +264,41 @@ export const useReleaseSellerNumberMutation = () =>
       if (input.sellerDetailsId) {
         await pb.collection('sellerDetails').delete(input.sellerDetailsId)
       }
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
+
+// ---------------------------------------------------------------------------
+// The register's pool of an event
+// ---------------------------------------------------------------------------
+
+/** Create the Dauernummern pool of (event, variation) from the aktiv register numbers, or
+ *  bring an existing one up to date (union — nothing is taken out of a pool here). Closed to
+ *  the public by a one-second obtainable window in the past, flagged isPermanentPool. */
+export const useEnsurePermanentPoolMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function ensurePermanentPoolMutation(input: {
+      eventId: string
+      variationId: string
+      numbers: number[]
+      existingPoolId?: string
+      existingNumbers?: number[]
+    }) {
+      const union = [...new Set([...(input.existingNumbers ?? []), ...input.numbers])].sort((a, b) => a - b)
+      const numbersAsJsonArray = JSON.stringify(union)
+      if (input.existingPoolId) {
+        await pb.collection('sellerNumberPools').update(input.existingPoolId, { numbersAsJsonArray, isPermanentPool: true })
+        return { poolId: input.existingPoolId, numbers: union.length, created: false }
+      }
+      const pool = await pb.collection('sellerNumberPools').create({
+        event: input.eventId,
+        sellerNumberVariation: input.variationId,
+        numbersAsJsonArray,
+        obtainableFrom: '2026-01-01 00:00:00.000Z',
+        obtainableTo: '2026-01-01 00:00:01.000Z',
+        isPermanentPool: true,
+      })
+      return { poolId: pool.id, numbers: union.length, created: true }
     }),
     onSuccess: () => void invalidateRegister(),
   })

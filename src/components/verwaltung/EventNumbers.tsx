@@ -8,6 +8,7 @@ import {
   resolveNumbers,
   useEventSellerNumbersQuery,
   usePoolsQuery,
+  useSellerHistoryQuery,
 } from '@/clients/admin/useRegisterQueries'
 import {
   useReleaseSellerNumberMutation,
@@ -65,19 +66,26 @@ export function EventNumbers({
   variations,
   registerNumbers,
   registerTerm,
+  initialEventId,
+  initialFilter,
 }: {
   events: Event[]
   variations: Variation[]
   registerNumbers: PermanentNumber[]
   /** What the category calls a register number — "Dauernummer" or "Mitarbeiternummer". */
   registerTerm: string
+  /** Opened from elsewhere (a candidate in the Marktzahlen): start on this event and number. */
+  initialEventId?: string
+  initialFilter?: string
 }) {
   const upcoming = events.filter((e) => e.eventDate >= new Date().toISOString().slice(0, 10))
   const [eventId, setEventId] = useState(
-    upcoming.length > 0 ? upcoming[upcoming.length - 1].id : (events[0]?.id ?? '')
+    initialEventId ?? (upcoming.length > 0 ? upcoming[upcoming.length - 1].id : (events[0]?.id ?? ''))
   )
-  const [filter, setFilter] = useState('')
+  const [filter, setFilter] = useState(initialFilter ?? '')
   const [onlyTaken, setOnlyTaken] = useState(true)
+  const history = useSellerHistoryQuery(eventId)
+  const historyByNumber = new Map((history.data?.sellers ?? []).map((s) => [s.number, s]))
   const [editingId, setEditingId] = useState<string | null>(null)
   const pools = usePoolsQuery(eventId)
   const poolIds = (pools.data ?? []).map((p) => p.id)
@@ -199,6 +207,7 @@ export function EventNumbers({
               <TableHead>Name</TableHead>
               <TableHead>Kontakt</TableHead>
               <TableHead>Kennzeichen</TableHead>
+              <TableHead>dabei seit</TableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
@@ -217,7 +226,7 @@ export function EventNumbers({
                 <RowGroup key={key}>
                   {skipped.length > 0 && (
                     <TableRow className="bg-slate-50/60">
-                      <TableCell colSpan={7} className="text-muted-foreground py-1 text-xs italic whitespace-normal">
+                      <TableCell colSpan={8} className="text-muted-foreground py-1 text-xs italic whitespace-normal">
                         ausgelassen: {describeRange(skipped)} — Kleidergrößen und die Spendennummer werden nicht als Verkaufsnummer vergeben
                       </TableCell>
                     </TableRow>
@@ -278,6 +287,24 @@ export function EventNumbers({
                         </span>
                       )}
                     </TableCell>
+                    <TableCell className="text-xs">
+                      {d && (() => {
+                        const hst = historyByNumber.get(r.number)
+                        if (!history.data) return <span className="text-muted-foreground">…</span>
+                        if (!hst || hst.markets === 0) {
+                          return (
+                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800" title="dieser Name kommt in keinem früheren Markt der Kategorie vor">
+                              neu dabei
+                            </span>
+                          )
+                        }
+                        return (
+                          <span title={`${String(hst.markets)} frühere Märkte, zuletzt ${hst.lastMarket ?? ''}`}>
+                            {hst.firstMarket} · {String(hst.markets)}×
+                          </span>
+                        )
+                      })()}
+                    </TableCell>
                     <TableCell className="text-right">
                       {s && !isPast && (
                         <Button
@@ -294,7 +321,7 @@ export function EventNumbers({
                   </TableRow>
                   {isEditing && s && !isPast && (
                     <TableRow className="bg-slate-50">
-                      <TableCell colSpan={7} className="whitespace-normal">
+                      <TableCell colSpan={8} className="whitespace-normal">
                         <EditRegistration
                           row={r}
                           sellerNumber={s}

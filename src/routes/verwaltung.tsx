@@ -20,6 +20,7 @@ import { MarketStatsTab } from '@/components/verwaltung/MarketStatsTab'
 import { MaterialiseCard } from '@/components/verwaltung/MaterialiseCard'
 import { NewNumberForm } from '@/components/verwaltung/NewNumberForm'
 import { PoolsOverview } from '@/components/verwaltung/PoolsOverview'
+import { SyncLogTab } from '@/components/verwaltung/SyncLogTab'
 import { RegisterTable } from '@/components/verwaltung/RegisterTable'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -138,7 +139,7 @@ function Login() {
   )
 }
 
-type Section = 'register' | 'new' | 'materialise' | 'event' | 'pools' | 'stats'
+type Section = 'register' | 'new' | 'materialise' | 'event' | 'pools' | 'stats' | 'log'
 
 function Register({ categoryId }: { categoryId: string }) {
   const marketStats = useMarketStatsQuery(categoryId)
@@ -150,6 +151,9 @@ function Register({ categoryId }: { categoryId: string }) {
   const events = useEventsQuery(true)
   const numberMarkets = useNumberMarketsQuery(true)
   const [section, setSection] = useState<Section>('register')
+  // A jump into the Verkäuferliste from a candidate: event + number, and a nonce so the list
+  // remounts even when the same target is opened twice.
+  const [eventTarget, setEventTarget] = useState<{ eventId: string; number: number; nonce: number } | null>(null)
 
   if (
     !categories.data ||
@@ -184,6 +188,7 @@ function Register({ categoryId }: { categoryId: string }) {
             ['event', 'Verkäuferliste'],
             ['pools', 'Pools'],
             ['stats', 'Marktzahlen'],
+            ['log', 'Sync-Log'],
           ] as const
         ).map(([key, label]) => (
           <Button
@@ -228,6 +233,10 @@ function Register({ categoryId }: { categoryId: string }) {
           events={categoryEvents}
           registerNumbers={categoryNumbers}
           registerTerm={registerTerm}
+          onShowSeller={(eventId, number) => {
+            setEventTarget({ eventId, number, nonce: Date.now() })
+            setSection('event')
+          }}
         />
       )}
       {section === 'pools' && (
@@ -235,18 +244,22 @@ function Register({ categoryId }: { categoryId: string }) {
           key={selectedCategory}
           events={categoryEvents}
           variations={categoryVariations}
+          registerNumbers={categoryNumbers}
           registerTerm={registerTerm}
         />
       )}
       {section === 'event' && (
         <EventNumbers
-          key={selectedCategory}
+          key={`${selectedCategory}:${String(eventTarget?.nonce ?? 0)}`}
           events={categoryEvents}
           variations={categoryVariations}
           registerNumbers={categoryNumbers}
           registerTerm={registerTerm}
+          initialEventId={eventTarget?.eventId}
+          initialFilter={eventTarget ? String(eventTarget.number) : undefined}
         />
       )}
+      {section === 'log' && <SyncLogTab key={selectedCategory} events={categoryEvents} />}
     </div>
   )
 }

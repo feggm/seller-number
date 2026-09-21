@@ -5,6 +5,7 @@ import type {
   TopSeller,
 } from '@/clients/admin/useRegisterQueries'
 import { marketKey } from '@/clients/admin/useRegisterQueries'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -26,12 +27,15 @@ export function MarketStatsTab({
   events,
   registerNumbers,
   registerTerm,
+  onShowSeller,
 }: {
   stats: MarketStats[]
   topSellers: TopSeller[]
   events: Event[]
   registerNumbers: PermanentNumber[]
   registerTerm: string
+  /** Open the Verkäuferliste of that event on that number — where the name is. */
+  onShowSeller: (eventId: string, number: number) => void
 }) {
   const markets = [...stats].sort((a, b) => marketKey(b.market).localeCompare(marketKey(a.market)))
   const eventName = (id: string) => events.find((e) => e.id === id)?.eventName ?? ''
@@ -140,6 +144,16 @@ export function MarketStatsTab({
                       {c.latest.market}: Nr. <span className="font-mono font-semibold">{c.latest.number}</span>
                       {c.latest.event && <span className="text-muted-foreground ml-1 text-xs">{eventName(c.latest.event)}</span>}
                       {c.alreadyRegistered && <span className="ml-2 text-xs">inzwischen {registerTerm}</span>}
+                      {c.latest.event && (
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="h-auto px-2 py-0 text-xs"
+                          onClick={() => { onShowSeller(c.latest.event, c.latest.number); }}
+                        >
+                          Name in der Verkäuferliste
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs whitespace-normal">{c.markets.join(' · ')}</TableCell>
                   </TableRow>

@@ -1,6 +1,7 @@
 import type { Event } from '@/clients/admin/useRegisterQueries'
 import {
   useMaterialiseMutation,
+  useReleaseSellerNumberMutation,
   type MaterialiseResponse,
   type MaterialiseResult,
 } from '@/clients/admin/useRegisterMutations'
@@ -143,12 +144,19 @@ export function MaterialiseCard({ events, registerTerm }: { events: Event[]; reg
         </p>
       </div>
 
-      {report && <Report report={report} />}
+      {report && <Report report={report} onReleased={() => void run(true)} />}
     </div>
   )
 }
 
-function Report({ report }: { report: MaterialiseResponse }) {
+function Report({ report, onReleased }: { report: MaterialiseResponse; onReleased: () => void }) {
+  const release = useReleaseSellerNumberMutation()
+  const freeStale = async (r: MaterialiseResult) => {
+    if (!r.sellerNumberId) return
+    await release.mutateAsync({ sellerNumberId: r.sellerNumberId, sellerDetailsId: r.sellerDetailsId ?? '' })
+    toast.success(`Nr. ${String(r.number)} im Event freigegeben`)
+    onReleased()
+  }
   const grouped = ORDER.map((key) => ({
     key,
     rows: report.results.filter((r) => r.result === key),
@@ -196,6 +204,11 @@ function Report({ report }: { report: MaterialiseResponse }) {
                     <span className="text-xs text-red-700">registriert von {r.registeredName}</span>
                   )}
                   {r.reason && <span className="text-muted-foreground text-xs">{r.reason}</span>}
+                  {r.result === 'stale' && r.sellerNumberId && (
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-xs" disabled={release.isPending} onClick={() => void freeStale(r)}>
+                      im Event freigeben
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>

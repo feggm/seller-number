@@ -179,6 +179,62 @@ routerAdd('POST', '/api/seller-number/permanent-numbers/statistics', (e) => {
   }
 })
 
+// GET /api/seller-number/permanent-numbers/seller-history?eventId= — for every registration
+// of the event: how many earlier markets of the category the same person (hash pair of the
+// registered name) sold at, and the first and last of them. Superuser only: it starts from
+// names. Nothing leaves but counts and market labels.
+routerAdd('GET', '/api/seller-number/permanent-numbers/seller-history', (e) => {
+  const { nameHash } = require(`${__hooks}/permanent-numbers-core.js`)
+  const { marketKey } = require(`${__hooks}/permanent-numbers-statistics.js`)
+  const { orFilterForIds } = require(`${__hooks}/status-core.js`)
+
+  const authRecord = e.auth
+  if (!authRecord || authRecord.collection().name !== '_superusers') {
+    return e.json(401, { error: 'Unauthorized: Admin access required' })
+  }
+  const eventId = String(e.request.url.query().get('eventId') || '')
+  if (!/^[a-z0-9]{15}$/.test(eventId)) return e.json(400, { error: 'eventId is required' })
+
+  let event
+  try {
+    event = $app.findRecordById('events', eventId)
+  } catch (error) {
+    return e.json(404, { error: 'Event not found' })
+  }
+  const categoryId = event.get('eventCategory')
+  const pools = $app.findRecordsByFilter('sellerNumberPools', 'event = {:eventId}', '', 0, 0, { eventId }) || []
+  if (pools.length === 0) return e.json(200, { eventId, sellers: [] })
+  const rows = $app.findRecordsByFilter('sellerNumbers', `${orFilterForIds('sellerNumberPool', pools.map((p) => p.get('id')))} && sellerDetails != ""`, '', 0, 0) || []
+
+  // The category's whole trail, grouped by person; one query, then lookups.
+  const trail = {}
+  for (const s of $app.findRecordsByFilter('marketSellers', 'eventCategory = {:categoryId}', '', 0, 0, { categoryId }) || []) {
+    const key = `${s.get('firstNameHash')}|${s.get('lastNameHash')}`
+    if (!trail[key]) trail[key] = []
+    trail[key].push(s.get('market'))
+  }
+
+  const sellers = []
+  for (const row of rows) {
+    let details
+    try {
+      details = $app.findRecordById('sellerDetails', row.get('sellerDetails'))
+    } catch (error) {
+      continue
+    }
+    const key = `${nameHash(details.get('sellerFirstName'))}|${nameHash(details.get('sellerLastName'))}`
+    const markets = (trail[key] || []).slice().sort((a, b) => marketKey(a).localeCompare(marketKey(b)))
+    sellers.push({
+      number: row.get('sellerNumberNumber'),
+      sellerNumberId: row.get('id'),
+      markets: markets.length,
+      firstMarket: markets.length ? markets[0] : null,
+      lastMarket: markets.length ? markets[markets.length - 1] : null,
+    })
+  }
+  return e.json(200, { eventId, sellers })
+})
+
 // Keep the holder name hashes current on every save, admin UI included — the hashes are the
 // join key the v2 status flow will use, and a stale one is worse than none. The contact rule
 // (address on the e-mail channel, phone on WhatsApp) is checked in the same place.
