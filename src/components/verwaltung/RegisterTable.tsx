@@ -36,7 +36,7 @@ import { PagingBar } from './PagingBar'
 import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
-type SortKey = 'number' | 'holder' | 'status' | 'heldSince' | 'items' | 'revenue'
+type SortKey = 'number' | 'holder' | 'contact' | 'status' | 'heldSince' | 'items' | 'revenue'
 
 const STATUS_LABEL: Record<NumberStatus, string> = {
   aktiv: 'aktiv',
@@ -103,6 +103,9 @@ export function RegisterTable({
     switch (sort.key) {
       case 'holder':
         return `${h?.holderLastName ?? ''} ${h?.holderFirstName ?? ''}`.toLowerCase()
+      case 'contact':
+        // E-Mail first, then WhatsApp with a number, then WhatsApp without one — the ones to chase.
+        return h ? (h.holderContactChannel === 'whatsapp' ? (h.holderPhone.trim() ? 1 : 2) : 0) : 3
       case 'status':
         return n.status
       case 'heldSince':
@@ -162,7 +165,7 @@ export function RegisterTable({
               <SortHead label="Nr." sortKey="number" sort={sort} onToggle={toggleSort} className="w-16" />
               <TableHead>Variation</TableHead>
               <SortHead label="Halter:in" sortKey="holder" sort={sort} onToggle={toggleSort} />
-              <TableHead>Kontakt</TableHead>
+              <SortHead label="Kontakt" sortKey="contact" sort={sort} onToggle={toggleSort} />
               <SortHead label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
               <SortHead label="seit" sortKey="heldSince" sort={sort} onToggle={toggleSort} />
               <TableHead>
