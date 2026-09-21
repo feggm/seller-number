@@ -32,6 +32,8 @@ import { euro, windowOf } from './figures'
 import { MarketFigures } from './MarketFigures'
 import { MarketTrend } from './MarketTrend'
 import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
+import { PagingBar } from './PagingBar'
+import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
 type SortKey = 'number' | 'holder' | 'status' | 'heldSince' | 'items' | 'revenue'
@@ -95,6 +97,7 @@ export function RegisterTable({
     )
   })
   const flaggedCount = numbers.filter(needsReview).length
+  const paging = usePaging(visible.length, `${needle}|${String(onlyFlagged)}|${sort.key}${String(sort.dir)}`)
   const sortValue = (n: PermanentNumber): string | number => {
     const h = n.expand?.holder
     switch (sort.key) {
@@ -177,7 +180,7 @@ export function RegisterTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visible.map((n) => {
+            {pageOf(visible, paging).map((n) => {
               const h = n.expand?.holder
               const warning = h ? holderWarning(h) : null
               const isEditing = editingId === n.id
@@ -206,23 +209,11 @@ export function RegisterTable({
                     </TableCell>
                     <TableCell className="text-sm">
                       {h && (
-                        <div className="flex flex-col">
-                          <span title={h.holderEmail || h.holderPhone || undefined}>
-                            {h.holderContactChannel === 'whatsapp' ? 'WhatsApp' : 'E-Mail'}
-                            {!h.holderEmail && !h.holderPhone && <span className="text-muted-foreground"> · keine Angabe</span>}
-                          </span>
-                          {warning && (
-                            <span
-                              className={
-                                warning.level === 'error'
-                                  ? 'text-xs text-red-700'
-                                  : 'text-xs text-amber-700'
-                              }
-                            >
-                              ⚠ {warning.text}
-                            </span>
-                          )}
-                        </div>
+                        <span title={[h.holderEmail || h.holderPhone, warning?.text].filter(Boolean).join(' — ') || undefined}>
+                          {h.holderContactChannel === 'whatsapp' ? 'WhatsApp' : 'E-Mail'}
+                          {!h.holderEmail && !h.holderPhone && <span className="text-muted-foreground"> · keine Angabe</span>}
+                          {warning && <span className="ml-1 text-amber-600" aria-label={warning.text}>⚠</span>}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -268,6 +259,7 @@ export function RegisterTable({
           </TableBody>
         </Table>
       </div>
+      <PagingBar paging={paging} noun="Nummern" />
     </div>
   )
 }
