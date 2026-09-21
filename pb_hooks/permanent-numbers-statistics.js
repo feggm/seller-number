@@ -134,9 +134,9 @@ const cleanBody = (body) => {
 // ---------------------------------------------------------------------------
 
 const holderMatchOf = (row, holder) => {
+  const { holderHasHashes } = require(`${__hooks}/permanent-numbers-core.js`)
+  if (holderHasHashes(holder, row.firstNameHash, row.lastNameHash)) return 'holder'
   const firstHash = holder.get('holderFirstNameHash') || ''
-  const lastHash = holder.get('holderLastNameHash') || ''
-  if (row.firstNameHash === firstHash && row.lastNameHash === lastHash) return 'holder'
   if (row.firstNameHash === firstHash) return 'nameChange'
   return 'mismatch'
 }

@@ -53,6 +53,63 @@ const nameHash = (value) => sha256Hex(normaliseName(value))
 const applyHolderHashes = (record) => {
   record.set('holderFirstNameHash', nameHash(record.get('holderFirstName')))
   record.set('holderLastNameHash', nameHash(record.get('holderLastName')))
+  record.set(
+    'holderAliases',
+    normaliseAliases(record.get('holderAliases'), {
+      firstNameHash: record.get('holderFirstNameHash'),
+      lastNameHash: record.get('holderLastNameHash'),
+    })
+  )
+}
+
+// The other spellings of this person, each with its hash pair. An entry with names gets its
+// hashes recomputed — a missing half ("Steffi", surname unchanged) falls back to the holder's
+// own hash for that half; one with hashes only (taken over from a market row) is kept as it
+// is. Malformed entries are dropped, duplicates collapse on the hash pair.
+const normaliseAliases = (raw, defaults = {}) => {
+  // A json field reads back as types.JSONRaw (bytes with a string() method), a request body
+  // hands over a plain array, a string arrives from a raw SQL value — take all three.
+  let list = raw
+  if (list && typeof list === 'object' && typeof list.string === 'function') list = list.string()
+  if (typeof list === 'string') {
+    try {
+      list = list.trim() ? JSON.parse(list) : []
+    } catch (error) {
+      list = []
+    }
+  }
+  if (list && typeof list === 'object' && !Array.isArray(list)) {
+    try {
+      list = JSON.parse(JSON.stringify(list))
+    } catch (error) {
+      list = []
+    }
+  }
+  if (!Array.isArray(list)) return []
+  const out = []
+  const seen = {}
+  for (const entry of list) {
+    if (!entry || typeof entry !== 'object') continue
+    const firstName = String(entry.firstName || '').trim()
+    const lastName = String(entry.lastName || '').trim()
+    const firstNameHash = firstName ? nameHash(firstName) : String(entry.firstNameHash || (lastName ? defaults.firstNameHash : '') || '').toLowerCase()
+    const lastNameHash = lastName ? nameHash(lastName) : String(entry.lastNameHash || (firstName ? defaults.lastNameHash : '') || '').toLowerCase()
+    if (!/^[a-f0-9]{64}$/.test(firstNameHash) || !/^[a-f0-9]{64}$/.test(lastNameHash)) continue
+    const key = `${firstNameHash}|${lastNameHash}`
+    if (seen[key]) continue
+    seen[key] = true
+    out.push({ firstName, lastName, firstNameHash, lastNameHash })
+  }
+  return out
+}
+
+// Does this hash pair name the holder — under the main spelling or one of the aliases?
+const holderHasHashes = (holder, firstNameHash, lastNameHash) => {
+  if (holder.get('holderFirstNameHash') === firstNameHash && holder.get('holderLastNameHash') === lastNameHash) return true
+  for (const alias of normaliseAliases(holder.get('holderAliases'))) {
+    if (alias.firstNameHash === firstNameHash && alias.lastNameHash === lastNameHash) return true
+  }
+  return false
 }
 
 // The channel rule, enforced where admin-UI edits arrive too: an e-mail holder needs an
@@ -647,6 +704,8 @@ module.exports = {
   nameHash,
   sha256Hex,
   applyHolderHashes,
+  normaliseAliases,
+  holderHasHashes,
   applyHolderContact,
   holderWarning,
   importRegister,

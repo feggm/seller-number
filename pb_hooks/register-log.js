@@ -6,7 +6,7 @@
 // The fields worth a diff; hashes and timestamps are derived, not edited.
 const LOGGED_FIELDS = {
   permanentNumbers: ['sellerNumberVariation', 'permanentNumberNumber', 'holder', 'status', 'heldSince', 'releasedAt'],
-  permanentNumberHolders: ['holderFirstName', 'holderLastName', 'holderEmail', 'holderPhone', 'holderContactChannel', 'isStaff', 'holderNote'],
+  permanentNumberHolders: ['holderFirstName', 'holderLastName', 'holderEmail', 'holderPhone', 'holderContactChannel', 'isStaff', 'holderNote', 'holderAliases'],
   // An event's registrations, when the Verwaltung page edits or frees them.
   sellerDetails: ['sellerFirstName', 'sellerLastName', 'sellerEmail', 'sellerPhone', 'isStaff', 'permanentNumberHolder'],
   sellerNumbers: ['sellerNumberNumber', 'sellerNumberPool', 'sellerDetails', 'reservedAt'],
@@ -16,7 +16,13 @@ const snapshot = (record, collectionName) => {
   const out = {}
   if (!record) return out
   for (const field of LOGGED_FIELDS[collectionName] || []) {
-    const value = record.get(field)
+    let value = record.get(field)
+    // A json field comes back as a Go value; compare it as text.
+    if (field === 'holderAliases') {
+      if (value && typeof value === 'object' && typeof value.string === 'function') value = value.string()
+      value = value ? String(value) : ''
+      if (value === '[]' || value === 'null') value = ''
+    }
     out[field] = value === null || value === undefined ? '' : value
   }
   return out

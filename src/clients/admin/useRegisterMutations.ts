@@ -18,6 +18,16 @@ import {
  * which is the one place that touches sellerDetails/sellerNumbers.
  */
 
+// An alias as the form sends it: names (the hook computes the hashes) or, taken over from a
+// market row, the hash pair alone.
+export const AliasInputSchema = z.object({
+  firstName: z.string().trim().default(''),
+  lastName: z.string().trim().default(''),
+  firstNameHash: z.string().default(''),
+  lastNameHash: z.string().default(''),
+})
+export type AliasInput = z.infer<typeof AliasInputSchema>
+
 export const HolderInputSchema = z.object({
   holderFirstName: z.string().trim().min(1, 'Vorname fehlt'),
   holderLastName: z.string().trim().min(1, 'Nachname fehlt'),
@@ -26,6 +36,7 @@ export const HolderInputSchema = z.object({
   holderContactChannel: ContactChannelSchema,
   isStaff: z.boolean(),
   holderNote: z.string().trim(),
+  holderAliases: AliasInputSchema.array().default([]),
 })
 export type HolderInput = z.infer<typeof HolderInputSchema>
 
@@ -79,6 +90,44 @@ export const useUpdateNumberMutation = () =>
       return PermanentNumberSchema.parse(
         await pb.collection('permanentNumbers').update(input.id, data, { expand: 'holder' })
       )
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
+
+/** "Dieselbe Person": a market row sold under another spelling becomes an alias of the holder,
+ *  and every market row of the number with that hash pair counts as the holder's from now on.
+ *  The stored review flag catches up with the next push; the page recomputes it on read. */
+export const useAcceptAliasMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function acceptAliasMutation(input: {
+      holderId: string
+      currentAliases: AliasInput[]
+      firstNameHash: string
+      lastNameHash: string
+      permanentNumberId: string
+    }) {
+      const already = input.currentAliases.some(
+        (a) => a.firstNameHash === input.firstNameHash && a.lastNameHash === input.lastNameHash
+      )
+      if (!already) {
+        await pb.collection('permanentNumberHolders').update(input.holderId, {
+          holderAliases: [
+            ...input.currentAliases,
+            { firstName: '', lastName: '', firstNameHash: input.firstNameHash, lastNameHash: input.lastNameHash },
+          ],
+        })
+      }
+      const rows = await pb.collection('permanentNumberMarkets').getFullList({
+        filter: pb.filter(
+          'permanentNumber = {:id} && firstNameHash = {:f} && lastNameHash = {:l}',
+          { id: input.permanentNumberId, f: input.firstNameHash, l: input.lastNameHash }
+        ),
+        fields: 'id',
+      })
+      for (const row of rows) {
+        await pb.collection('permanentNumberMarkets').update(row.id, { holderMatch: 'holder', holder: input.holderId })
+      }
+      return rows.length
     }),
     onSuccess: () => void invalidateRegister(),
   })
