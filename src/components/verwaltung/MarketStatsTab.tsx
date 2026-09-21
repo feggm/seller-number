@@ -108,9 +108,14 @@ export function MarketStatsTab({
               <TableBody>
                 {markets.map((m, i) => (
                   <TableRow key={m.id} className={i < WINDOW ? undefined : 'text-muted-foreground'}>
-                    <TableCell className="font-mono" title={m.event ? eventName(m.event) : undefined}>
+                    <TableCell className="font-mono">
                       {m.market}
                       {i < WINDOW && <span className="ml-1 text-xs text-emerald-700" title="im Vier-Märkte-Fenster">●</span>}
+                      {m.event ? (
+                        <span className="ml-1 text-xs text-sky-700" title={`Event: ${eventName(m.event)} — Namen über die Verkäuferliste`}>🗓</span>
+                      ) : (
+                        <span className="text-muted-foreground/50 ml-1 text-xs" title="kein Event in der App — Markt aus dem Backfill, nur Nummern">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{m.sellers}</TableCell>
                     <TableCell className="text-right tabular-nums">
