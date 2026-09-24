@@ -237,7 +237,7 @@ export function EventNumbers({
                   {skipped.length > 0 && (
                     <TableRow className="bg-slate-50/60">
                       <TableCell colSpan={8} className="text-muted-foreground py-1 text-xs italic whitespace-normal">
-                        ausgelassen: {describeRange(skipped)} — Kleidergrößen und die Spendennummer werden nicht als Verkaufsnummer vergeben
+                        ausgelassen: {describeRange(skipped)} — Kleidergrößen werden nicht als Verkaufsnummer vergeben
                       </TableCell>
                     </TableRow>
                   )}

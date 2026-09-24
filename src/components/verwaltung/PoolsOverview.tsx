@@ -168,7 +168,7 @@ export function PoolsOverview({
         <p className="text-muted-foreground text-xs">
           <strong>Ausgelassen:</strong> <span className="font-mono">{describeRange(gaps)}</span> — in keinem Pool
           dieses Events. Kleidergrößen (bei der Anziehbar 32–48 gerade, beim Kinderkleidermarkt 50, 56, 62 …)
-          lesen sich auf dem Etikett als Größe, die Spendennummer gehört niemandem; beim Kinderkleidermarkt fehlen
+          lesen sich auf dem Etikett als Größe; beim Kinderkleidermarkt fehlen
           im Publikums-Pool außerdem die aktiven Dauernummern, die im 🔒-Pool liegen.
         </p>
       )}
