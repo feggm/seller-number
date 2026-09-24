@@ -60,8 +60,7 @@ export function describeRange(numbers: number[]): string {
 }
 
 /** The numbers between the smallest and the largest that are in none of the pools — left out
- *  on purpose (clothing sizes read wrong on a label, the donation number belongs to nobody),
- *  but puzzling in a list unless said so. */
+ *  on purpose (clothing sizes read wrong on a label), but puzzling in a list unless said so. */
 export function gapsBetween(numbers: number[]): number[] {
   if (numbers.length === 0) return []
   const have = new Set(numbers)

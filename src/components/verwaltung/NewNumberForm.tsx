@@ -34,9 +34,10 @@ export function NewNumberForm({
   const [newHolder, setNewHolder] = useState<HolderInput>(emptyHolderInput())
   const create = useCreateNumberMutation()
 
-  // A Verkaufsnummer only exists inside a pool. The next event's pools say which numbers the
-  // category has at all — and whether the number sits in the public range, where it would be
-  // handed out to anyone before it gets materialised.
+  // A Verkaufsnummer only exists inside a pool. The next event's pools say whether the number
+  // sits in the public range, where it would be handed out to anyone before it gets
+  // materialised. A number in no pool yet (the donation number, say) is fine: the pools
+  // overview then reports it missing from the register's pool and adds it there.
   const today = new Date().toISOString().slice(0, 10)
   const upcoming = events.filter((e) => e.eventDate.slice(0, 10) >= today)
   const referenceEvent: Event | undefined = upcoming.length > 0 ? upcoming[upcoming.length - 1] : events.at(0)
@@ -49,24 +50,20 @@ export function NewNumberForm({
     ? poolsOfVariation.filter((p) => resolveNumbers(p.numbersAsJsonArray).includes(parsed))
     : []
   const inPublicPool = containing.some((p) => !p.isPermanentPool)
-  const poolCheck: { ok: boolean; text: string; level: 'ok' | 'warn' | 'error' } | null = !numberValid
+  const poolCheck: { text: string; level: 'ok' | 'warn' } | null = !numberValid
     ? null
     : !referenceEvent || !pools.data
       ? null
       : containing.length === 0
-        ? { ok: false, level: 'error', text: `Nr. ${String(parsed)} liegt in keinem Pool von „${referenceEvent.eventName}" (${formatDay(referenceEvent.eventDate)}) — erst den Pool anlegen oder erweitern.` }
+        ? { level: 'warn', text: `Nr. ${String(parsed)} liegt in keinem Pool von „${referenceEvent.eventName}" (${formatDay(referenceEvent.eventDate)}) — nach dem Anlegen unter „Pools" in den ${registerTerm}n-Pool aufnehmen.` }
         : inPublicPool
-          ? { ok: true, level: 'warn', text: `Nr. ${String(parsed)} liegt im Publikums-Pool: vor dem Kopieren in den ${registerTerm}n-Pool umziehen, sonst geht sie an einen normalen Verkäufer.` }
-          : { ok: true, level: 'ok', text: `Nr. ${String(parsed)} liegt im ${registerTerm}n-Pool von „${referenceEvent.eventName}".` }
+          ? { level: 'warn', text: `Nr. ${String(parsed)} liegt im Publikums-Pool: vor dem Kopieren in den ${registerTerm}n-Pool umziehen, sonst geht sie an einen normalen Verkäufer.` }
+          : { level: 'ok', text: `Nr. ${String(parsed)} liegt im ${registerTerm}n-Pool von „${referenceEvent.eventName}".` }
 
   const submit = async () => {
     const n = Number(number)
     if (!Number.isInteger(n) || n <= 0) {
       toast.error('Verkaufsnummer muss eine positive ganze Zahl sein')
-      return
-    }
-    if (poolCheck && !poolCheck.ok) {
-      toast.error(poolCheck.text)
       return
     }
     const created = await create.mutateAsync({
@@ -98,7 +95,6 @@ export function NewNumberForm({
             inputMode="numeric"
             value={number}
             onChange={(e) => { setNumber(e.target.value); }}
-            aria-invalid={poolCheck ? !poolCheck.ok : undefined}
             required
           />
         </Field>
@@ -124,13 +120,7 @@ export function NewNumberForm({
 
       {poolCheck && (
         <p
-          className={
-            poolCheck.level === 'error'
-              ? 'text-xs text-red-700'
-              : poolCheck.level === 'warn'
-                ? 'text-xs text-amber-700'
-                : 'text-xs text-emerald-700'
-          }
+          className={poolCheck.level === 'warn' ? 'text-xs text-amber-700' : 'text-xs text-emerald-700'}
         >
           {poolCheck.text}
         </p>
@@ -165,7 +155,7 @@ export function NewNumberForm({
 
       <Button
         type="submit"
-        disabled={create.isPending || (mode === 'existing' && !holderId) || (poolCheck !== null && !poolCheck.ok)}
+        disabled={create.isPending || (mode === 'existing' && !holderId)}
       >
         Dauernummer anlegen
       </Button>
