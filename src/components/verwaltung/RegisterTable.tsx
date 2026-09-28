@@ -31,9 +31,10 @@ import { HistoryList } from './HistoryList'
 import { euro, windowOf } from './figures'
 import { MarketFigures } from './MarketFigures'
 import { MarketTrend } from './MarketTrend'
-import { emptyHolderInput, formatDay, holderToInput, holderWarning, toDayInput } from './helpers'
+import { compareValues, emptyHolderInput, formatDay, holderToInput, holderWarning, nextSort, toDayInput, type SortState } from './helpers'
 import { PagingBar } from './PagingBar'
 import { SearchInput } from './SearchInput'
+import { SortButton, SortHead } from './SortHead'
 import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
@@ -78,7 +79,7 @@ export function RegisterTable({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'number', dir: 1 })
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: 'number', dir: 1 })
   const statsByMarket = new Map(stats.map((s) => [s.market, s]))
   const variationName = (id: string) =>
     variations.find((v) => v.id === id)?.sellerNumberVariationName ?? '?'
@@ -99,7 +100,6 @@ export function RegisterTable({
   })
   const flaggedCount = numbers.filter(needsReview).length
   const paging = usePaging(`${needle}|${String(onlyFlagged)}|${sort.key}${String(sort.dir)}`)
-  const page = pageOf(visible, paging)
   const sortValue = (n: PermanentNumber): string | number => {
     const h = n.expand?.holder
     switch (sort.key) {
@@ -120,14 +120,11 @@ export function RegisterTable({
         return n.permanentNumberNumber
     }
   }
-  visible.sort((a, b) => {
-    const va = sortValue(a)
-    const vb = sortValue(b)
-    const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'de')
-    return (cmp || a.permanentNumberNumber - b.permanentNumberNumber) * sort.dir
-  })
+  visible.sort((a, b) => (compareValues(sortValue(a), sortValue(b)) || a.permanentNumberNumber - b.permanentNumberNumber) * sort.dir)
+  // Cut the page only now: pageOf copies its slice, so sorting after it changed nothing on screen.
+  const page = pageOf(visible, paging)
   const toggleSort = (key: SortKey) => {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }))
+    setSort((s) => nextSort(s, key))
   }
 
   return (
@@ -167,13 +164,9 @@ export function RegisterTable({
               <SortHead label="seit" sortKey="heldSince" sort={sort} onToggle={toggleSort} />
               <TableHead>
                 <span className="inline-flex gap-2">
-                  <button type="button" className="rounded px-1 hover:bg-slate-100 hover:underline" title="sortieren" onClick={() => { toggleSort('items'); }}>
-                    Ø Teile <span aria-hidden className={sort.key === 'items' ? '' : 'text-muted-foreground/60'}>{sort.key === 'items' ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}</span>
-                  </button>
+                  <SortButton label="Ø Teile" sortKey="items" sort={sort} onToggle={toggleSort} />
                   <span className="text-muted-foreground">·</span>
-                  <button type="button" className="rounded px-1 hover:bg-slate-100 hover:underline" title="sortieren" onClick={() => { toggleSort('revenue'); }}>
-                    Ø Umsatz <span aria-hidden className={sort.key === 'revenue' ? '' : 'text-muted-foreground/60'}>{sort.key === 'revenue' ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}</span>
-                  </button>
+                  <SortButton label="Ø Umsatz" sortKey="revenue" sort={sort} onToggle={toggleSort} />
                 </span>
               </TableHead>
               <TableHead className="text-right">Aktion</TableHead>
@@ -261,36 +254,6 @@ export function RegisterTable({
       </div>
       <PagingBar view={page} noun="Nummern" />
     </div>
-  )
-}
-
-function SortHead({
-  label,
-  sortKey,
-  sort,
-  onToggle,
-  className,
-}: {
-  label: string
-  sortKey: SortKey
-  sort: { key: SortKey; dir: 1 | -1 }
-  onToggle: (key: SortKey) => void
-  className?: string
-}) {
-  return (
-    <TableHead className={className}>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 rounded px-1 hover:bg-slate-100 hover:underline"
-        title="sortieren"
-        onClick={() => { onToggle(sortKey); }}
-      >
-        {label}
-        <span aria-hidden className={sort.key === sortKey ? '' : 'text-muted-foreground/60'}>
-          {sort.key === sortKey ? (sort.dir === 1 ? '▲' : '▼') : '⇅'}
-        </span>
-      </button>
-    </TableHead>
   )
 }
 

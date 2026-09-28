@@ -70,3 +70,13 @@ export function gapsBetween(numbers: number[]): number[] {
   for (let n = min; n <= max; n++) if (!have.has(n)) gaps.push(n)
   return gaps
 }
+
+export type SortState<K extends string> = { key: K; dir: 1 | -1 }
+
+/** Same key again flips the direction, another key starts ascending. */
+export const nextSort = <K extends string>(s: SortState<K>, key: K): SortState<K> =>
+  s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }
+
+/** Numbers compare as numbers, everything else as German text. */
+export const compareValues = (a: string | number, b: string | number) =>
+  typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'de')
