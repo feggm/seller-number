@@ -49,11 +49,11 @@ import { HoverCard } from './HoverCard'
 import { SellerTrail } from './SellerTrail'
 import { PagingBar } from './PagingBar'
 import { SearchInput } from './SearchInput'
-import { SortHead } from './SortHead'
+import { SortButton, SortHead } from './SortHead'
 import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
 
-type SortKey = 'number' | 'status' | 'name' | 'contact' | 'flags' | 'since'
+type SortKey = 'number' | 'status' | 'name' | 'contact' | 'flags' | 'since' | 'markets'
 
 type Row = {
   number: number
@@ -180,6 +180,9 @@ export function EventNumbers({
         const first = historyByNumber.get(r.number)?.firstMarket
         return first ? marketKey(first) : '9999'
       }
+      case 'markets':
+        // "neu dabei" has none before this one.
+        return historyByNumber.get(r.number)?.markets ?? 0
       default:
         return r.number
     }
@@ -257,7 +260,13 @@ export function EventNumbers({
               <SortHead label="Name" sortKey="name" sort={sort} onToggle={toggleSort} />
               <SortHead label="Kontakt" sortKey="contact" sort={sort} onToggle={toggleSort} />
               <SortHead label="Kennzeichen" sortKey="flags" sort={sort} onToggle={toggleSort} />
-              <SortHead label="dabei seit" sortKey="since" sort={sort} onToggle={toggleSort} />
+              <TableHead>
+                <span className="inline-flex gap-2">
+                  <SortButton label="dabei seit" sortKey="since" sort={sort} onToggle={toggleSort} />
+                  <span className="text-muted-foreground">·</span>
+                  <SortButton label="Märkte" sortKey="markets" sort={sort} onToggle={toggleSort} />
+                </span>
+              </TableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
