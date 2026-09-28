@@ -6,6 +6,7 @@ import type {
   Variation,
 } from '@/clients/admin/useRegisterQueries'
 import {
+  marketKey,
   resolveNumbers,
   useEventSellerNumbersQuery,
   usePoolsQuery,
@@ -43,13 +44,16 @@ import { toast } from 'sonner'
 
 import { Field, Select } from './fields'
 import { euro } from './figures'
-import { describeRange, formatDay, gapsBetween } from './helpers'
+import { compareValues, describeRange, formatDay, gapsBetween, nextSort, type SortState } from './helpers'
 import { HoverCard } from './HoverCard'
 import { SellerTrail } from './SellerTrail'
 import { PagingBar } from './PagingBar'
 import { SearchInput } from './SearchInput'
+import { SortHead } from './SortHead'
 import { pageOf, usePaging } from './usePaging'
 import { useEditRowKeys } from './useEditRowKeys'
+
+type SortKey = 'number' | 'status' | 'name' | 'contact' | 'flags' | 'since'
 
 type Row = {
   number: number
@@ -101,7 +105,8 @@ export function EventNumbers({
   const pools = usePoolsQuery(eventId)
   const poolIds = (pools.data ?? []).map((p) => p.id)
   const sellerNumbers = useEventSellerNumbersQuery(poolIds)
-  const paging = usePaging(`${eventId}|${filter.trim().toLowerCase()}|${String(onlyTaken)}`)
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: 'number', dir: 1 })
+  const paging = usePaging(`${eventId}|${filter.trim().toLowerCase()}|${String(onlyTaken)}|${sort.key}${String(sort.dir)}`)
 
   if (!eventId) return <p className="text-muted-foreground text-sm">Kein Event in dieser Kategorie.</p>
   if (!pools.data || (poolIds.length > 0 && !sellerNumbers.data)) {
@@ -156,6 +161,42 @@ export function EventNumbers({
       (d?.sellerEmail ?? '').toLowerCase().includes(needle)
     )
   })
+  const sortValue = (r: Row): string | number => {
+    const s = r.sellerNumber
+    const d = s?.expand?.sellerDetails
+    switch (sort.key) {
+      case 'status':
+        // In the order a number moves through: registered, held, free, closed, register without holder.
+        return d ? 0 : s ? 1 : r.poolPermanent ? 4 : r.poolClosed ? 3 : 2
+      case 'name':
+        return `${d?.sellerLastName ?? ''} ${d?.sellerFirstName ?? ''}`.toLowerCase()
+      case 'contact':
+        return d?.sellerEmail ? (d.sellerPhone ? 0 : 1) : d?.sellerPhone ? 2 : 3
+      case 'flags':
+        // MA before DN before a bare register row, each combination its own block.
+        return `${d?.isStaff ? 'a' : 'b'}${d?.permanentNumberHolder ? 'a' : 'b'}${r.registerNumber && !d?.permanentNumberHolder ? 'a' : 'b'}`
+      case 'since': {
+        // Calendar order of the first market; "neu dabei" is the newest of all.
+        const first = historyByNumber.get(r.number)?.firstMarket
+        return first ? marketKey(first) : '9999'
+      }
+      default:
+        return r.number
+    }
+  }
+  // Numbers nobody registered have no name, contact, flags or history — they stay at the end
+  // whichever way those columns sort.
+  const unsortable = (r: Row) =>
+    !['number', 'status'].includes(sort.key) && !r.sellerNumber?.expand?.sellerDetails
+  visible.sort(
+    (a, b) =>
+      Number(unsortable(a)) - Number(unsortable(b)) ||
+      (compareValues(sortValue(a), sortValue(b)) || a.number - b.number || a.variationName.localeCompare(b.variationName)) * sort.dir
+  )
+  const byNumber = sort.key === 'number' && sort.dir === 1
+  const toggleSort = (key: SortKey) => {
+    setSort((s) => nextSort(s, key))
+  }
   const page = pageOf(visible, paging)
   const registered = rows.filter((r) => r.sellerNumber?.sellerDetails).length
   const held = rows.filter((r) => r.sellerNumber && !r.sellerNumber.sellerDetails).length
@@ -210,13 +251,13 @@ export function EventNumbers({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">Nr.</TableHead>
+              <SortHead label="Nr." sortKey="number" sort={sort} onToggle={toggleSort} className="w-16" />
               <TableHead>Variation</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Kontakt</TableHead>
-              <TableHead>Kennzeichen</TableHead>
-              <TableHead>dabei seit</TableHead>
+              <SortHead label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
+              <SortHead label="Name" sortKey="name" sort={sort} onToggle={toggleSort} />
+              <SortHead label="Kontakt" sortKey="contact" sort={sort} onToggle={toggleSort} />
+              <SortHead label="Kennzeichen" sortKey="flags" sort={sort} onToggle={toggleSort} />
+              <SortHead label="dabei seit" sortKey="since" sort={sort} onToggle={toggleSort} />
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
@@ -229,7 +270,8 @@ export function EventNumbers({
               const position = page.start + index
               const previous = position > 0 ? visible[position - 1].number : null
               const skipped: number[] = []
-              if (!needle && !onlyTaken && previous !== null) {
+              // Gaps only read right in number order; any other sort would scatter them.
+              if (byNumber && !needle && !onlyTaken && previous !== null) {
                 for (let n = previous + 1; n < r.number; n++) if (gapSet.has(n)) skipped.push(n)
               }
               return (
