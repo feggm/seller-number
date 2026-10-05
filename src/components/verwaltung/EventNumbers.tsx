@@ -1,4 +1,5 @@
 import type {
+  BabyNrOverride,
   Event,
   PermanentNumber,
   SellerHistoryEntry,
@@ -6,6 +7,8 @@ import type {
   Variation,
 } from '@/clients/admin/useRegisterQueries'
 import {
+  BabyNrOverrideSchema,
+  isBabyVariationName,
   marketKey,
   resolveNumbers,
   useEventSellerNumbersQuery,
@@ -14,6 +17,7 @@ import {
 } from '@/clients/admin/useRegisterQueries'
 import {
   useReleaseSellerNumberMutation,
+  useUpdateBabyNrOverrideMutation,
   useUpdateSellerDetailsMutation,
   type SellerDetailsInput,
 } from '@/clients/admin/useRegisterMutations'
@@ -65,6 +69,16 @@ type Row = {
   sellerNumber?: SellerNumber
   registerNumber?: PermanentNumber
 }
+
+/** `babynr` as the export will write it — the override if set, else the variation (export-core.js). */
+const isBabyInExport = (r: Row) => {
+  const override = r.sellerNumber?.babyNrOverride ?? ''
+  return override === '' ? isBabyVariationName(r.variationName) : override === 'baby'
+}
+
+/** An override that actually changes what the variation would give — the case worth flagging. */
+const overridesVariation = (r: Row) =>
+  !!r.sellerNumber?.babyNrOverride && isBabyInExport(r) !== isBabyVariationName(r.variationName)
 
 /** How many of the person's markets the "dabei seit" hover shows; the edit row shows them all. */
 const HOVER_MARKETS = 5
@@ -173,8 +187,8 @@ export function EventNumbers({
       case 'contact':
         return d?.sellerEmail ? (d.sellerPhone ? 0 : 1) : d?.sellerPhone ? 2 : 3
       case 'flags':
-        // MA before DN before a bare register row, each combination its own block.
-        return `${d?.isStaff ? 'a' : 'b'}${d?.permanentNumberHolder ? 'a' : 'b'}${r.registerNumber && !d?.permanentNumberHolder ? 'a' : 'b'}`
+        // MA before DN before a bare register row before a babynr override, each combination its own block.
+        return `${d?.isStaff ? 'a' : 'b'}${d?.permanentNumberHolder ? 'a' : 'b'}${r.registerNumber && !d?.permanentNumberHolder ? 'a' : 'b'}${s?.babyNrOverride ? 'a' : 'b'}`
       case 'since': {
         // Calendar order of the first market; "neu dabei" is the newest of all.
         const first = historyByNumber.get(r.number)?.firstMarket
@@ -208,6 +222,7 @@ export function EventNumbers({
   // longer bookable.
   const unbookable = rows.filter((r) => !r.sellerNumber && r.poolPermanent).length
   const free = rows.length - registered - held - unbookable
+  const babyOverrides = rows.filter((r) => r.sellerNumber?.babyNrOverride).length
 
 
   return (
@@ -243,6 +258,14 @@ export function EventNumbers({
           {String(rows.length)} Nummern · {String(registered)} registriert · {String(held)} nur reserviert ·{' '}
           {String(free)} frei
           {unbookable > 0 && <> · {String(unbookable)} {registerTerm}n unbesetzt</>}
+          {babyOverrides > 0 && (
+            <>
+              {' · '}
+              <span className="text-violet-800" title="Nummern, deren babynr im Export von Hand gesetzt ist (Kennzeichen „manuell“)">
+                {String(babyOverrides)} Babynr. manuell
+              </span>
+            </>
+          )}
         </span>
       </div>
       {isPast && (
@@ -295,7 +318,14 @@ export function EventNumbers({
                   <TableRow className={isEditing ? 'bg-slate-50' : undefined}>
                     <TableCell className="font-mono font-semibold">{r.number}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {r.variationName}
+                      {overridesVariation(r) ? (
+                        <span title="babynr von Hand überschrieben — der Export folgt hier nicht der Variation">
+                          <span className="line-through">{r.variationName}</span>{' '}
+                          <span className="text-violet-800">→ {isBabyInExport(r) ? 'Babynummer' : 'regulär'}</span>
+                        </span>
+                      ) : (
+                        r.variationName
+                      )}
                       {r.poolPermanent && <span className="ml-1" title={`${registerTerm}n-Pool`}>🔒</span>}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -346,6 +376,14 @@ export function EventNumbers({
                           title={`im Register (${r.registerNumber.status}), im Event aber nicht vom Register belegt`}
                         >
                           Register: {r.registerNumber.status}
+                        </span>
+                      )}
+                      {s?.babyNrOverride && (
+                        <span
+                          className="ml-1 rounded bg-violet-100 px-1.5 py-0.5 text-violet-800"
+                          title={`von Hand gesetzt — die Variation „${r.variationName}" sagt ${isBabyVariationName(r.variationName) ? 'Babynummer' : 'regulär'}`}
+                        >
+                          {isBabyInExport(r) ? 'Babynr. (manuell)' : 'regulär (manuell)'}
                         </span>
                       )}
                     </TableCell>
@@ -438,16 +476,22 @@ function EditRegistration({
     sellerPhone: d?.sellerPhone ?? '',
     isStaff: d?.isStaff ?? false,
   })
+  const [babyNrOverride, setBabyNrOverride] = useState<BabyNrOverride>(sellerNumber.babyNrOverride)
   const update = useUpdateSellerDetailsMutation()
+  const updateOverride = useUpdateBabyNrOverrideMutation()
   const release = useReleaseSellerNumberMutation()
-  const busy = update.isPending || release.isPending
+  const busy = update.isPending || updateOverride.isPending || release.isPending
   const set = <K extends keyof SellerDetailsInput>(key: K, v: SellerDetailsInput[K]) => {
     setInput({ ...input, [key]: v })
   }
+  const variationIsBaby = isBabyVariationName(row.variationName)
 
   const save = async () => {
     if (!d) return
     await update.mutateAsync({ id: d.id, data: input })
+    if (babyNrOverride !== sellerNumber.babyNrOverride) {
+      await updateOverride.mutateAsync({ sellerNumberId: sellerNumber.id, babyNrOverride })
+    }
     toast.success(`Nr. ${String(row.number)}: Registrierung gespeichert`)
   }
   const free = async () => {
@@ -485,6 +529,17 @@ function EditRegistration({
             </Field>
             <Field label="Telefon">
               <Input value={input.sellerPhone} onChange={(e) => { set('sellerPhone', e.target.value); }} disabled={busy} />
+            </Field>
+            <Field label="Babynummer (babynr im Export)">
+              <Select
+                value={babyNrOverride}
+                onChange={(e) => { setBabyNrOverride(BabyNrOverrideSchema.parse(e.target.value)); }}
+                disabled={busy}
+              >
+                <option value="">automatisch — {variationIsBaby ? 'ja' : 'nein'} (Variation „{row.variationName}")</option>
+                <option value="regular">nein — als reguläre Nummer vergeben</option>
+                <option value="baby">ja — als Babynummer vergeben</option>
+              </Select>
             </Field>
           </div>
           <p className="text-muted-foreground text-xs">

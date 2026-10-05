@@ -59,6 +59,7 @@ erDiagram
         date reservedAt "required"
         relation sellerNumberPool FK "required"
         relation sellerDetails FK "optional"
+        select babyNrOverride "optional: regular | baby"
     }
 
     sellerDetails {

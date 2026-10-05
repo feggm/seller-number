@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { pb } from '../pocketbase'
 import { withErrorLogging } from '../withErrorLogging'
 import {
+  BabyNrOverrideSchema,
+  type BabyNrOverride,
   ContactChannelSchema,
   HolderSchema,
   NumberStatusSchema,
@@ -247,6 +249,20 @@ export const useUpdateSellerDetailsMutation = () =>
       await pb
         .collection('sellerDetails')
         .update(input.id, SellerDetailsInputSchema.parse(input.data))
+    }),
+    onSuccess: () => void invalidateRegister(),
+  })
+
+/** Set or clear the `babynr` override of one number in the event (sellerNumbers row). */
+export const useUpdateBabyNrOverrideMutation = () =>
+  useMutation({
+    mutationFn: withErrorLogging(async function updateBabyNrOverrideMutation(input: {
+      sellerNumberId: string
+      babyNrOverride: BabyNrOverride
+    }) {
+      await pb
+        .collection('sellerNumbers')
+        .update(input.sellerNumberId, { babyNrOverride: BabyNrOverrideSchema.parse(input.babyNrOverride) })
     }),
     onSuccess: () => void invalidateRegister(),
   })

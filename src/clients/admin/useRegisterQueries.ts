@@ -232,12 +232,20 @@ export const SellerDetailsSchema = z.object({
 })
 export type SellerDetails = z.infer<typeof SellerDetailsSchema>
 
+/** `babynr` in the export: '' follows the pool's variation, the other two override it. */
+export const BabyNrOverrideSchema = z.enum(['', 'regular', 'baby'])
+export type BabyNrOverride = z.infer<typeof BabyNrOverrideSchema>
+
+/** The variation rule export-core.js applies (`isBabyVariation`) — a name containing "baby". */
+export const isBabyVariationName = (name: string) => /baby/i.test(name)
+
 export const SellerNumberSchema = z.object({
   id: z.string(),
   sellerNumberNumber: z.number(),
   sellerNumberPool: z.string(),
   reservedAt: z.string(),
   sellerDetails: z.string(),
+  babyNrOverride: BabyNrOverrideSchema,
   expand: z.object({ sellerDetails: SellerDetailsSchema.optional() }).optional(),
 })
 export type SellerNumber = z.infer<typeof SellerNumberSchema>

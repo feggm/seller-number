@@ -9,7 +9,7 @@ const LOGGED_FIELDS = {
   permanentNumberHolders: ['holderFirstName', 'holderLastName', 'holderEmail', 'holderPhone', 'holderContactChannel', 'isStaff', 'holderNote', 'holderAliases'],
   // An event's registrations, when the Verwaltung page edits or frees them.
   sellerDetails: ['sellerFirstName', 'sellerLastName', 'sellerEmail', 'sellerPhone', 'isStaff', 'permanentNumberHolder'],
-  sellerNumbers: ['sellerNumberNumber', 'sellerNumberPool', 'sellerDetails', 'reservedAt'],
+  sellerNumbers: ['sellerNumberNumber', 'sellerNumberPool', 'sellerDetails', 'reservedAt', 'babyNrOverride'],
 }
 
 const snapshot = (record, collectionName) => {
