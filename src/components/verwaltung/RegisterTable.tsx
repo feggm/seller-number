@@ -140,7 +140,7 @@ export function RegisterTable({
         </span>
       </div>
       <details className="text-muted-foreground text-xs">
-        <summary className="cursor-pointer">Was die Status bedeuten</summary>
+        <summary className="cursor-pointer">Was bedeutet der Status?</summary>
         <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           {(Object.keys(STATUS_LABEL) as NumberStatus[]).map((s) => (
             <RowGroup key={s}>
