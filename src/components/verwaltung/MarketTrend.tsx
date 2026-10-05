@@ -10,11 +10,13 @@ import { euro } from './figures'
 
 const MARKETS_SHOWN = 8
 
-// Two series, validated pair from the reference palette (scripts/validate_palette.js:
-// CVD ΔE 24.7, normal ΔE 33.6, contrast ≥ 3:1). The median is dashed as well, so the pair is
-// never told apart by colour alone.
+// Three series, slots 1–3 of the reference palette (scripts/validate_palette.js, all pairs:
+// CVD ΔE ≥ 9.2, normal ΔE ≥ 24.0). The two medians are dashed and dotted as well, so no series
+// is told apart by colour alone; the aqua sits below 3:1 on the surface, which the table
+// underneath (MarketFigures) relieves.
 const SERIES_NUMBER = '#2a78d6'
 const SERIES_MEDIAN = '#eb6834'
+const SERIES_PERMANENT = '#1baf7a'
 const INK = '#0b0b0b'
 const INK_SECONDARY = '#52514e'
 const GRID = '#e5e5e2'
@@ -22,7 +24,8 @@ const GRID = '#e5e5e2'
 type Point = { market: string; value: number | null; match?: NumberMarket['holderMatch'] }
 
 /**
- * The number's last eight markets against the market median — one small chart per measure
+ * The number's last eight markets against the market median and the median among the
+ * Dauernummern — one small chart per measure
  * (items, revenue), one axis each. The line connects only the markets the current holder
  * sold; another person's market is a hollow marker, off the line.
  */
@@ -41,25 +44,30 @@ export function MarketTrend({
   const own = new Map(rows.filter((r) => r.permanentNumber === number.id).map((r) => [r.market, r]))
   if (markets.length === 0 || own.size === 0) return null
 
-  const series = (pick: (r: NumberMarket) => number, median: (s: MarketStats) => number | null) => ({
+  const series = (
+    pick: (r: NumberMarket) => number,
+    median: (s: MarketStats) => number | null,
+    permanent: (s: MarketStats) => number | null
+  ) => ({
     number: markets.map((s): Point => {
       const r = own.get(s.market)
       return r ? { market: s.market, value: pick(r), match: r.holderMatch } : { market: s.market, value: null }
     }),
     median: markets.map((s): Point => ({ market: s.market, value: median(s) })),
+    permanent: markets.map((s): Point => ({ market: s.market, value: permanent(s) })),
   })
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <Chart
         title="Teile"
-        {...series((r) => r.itemsSold, (s) => s.itemsMedian)}
+        {...series((r) => r.itemsSold, (s) => s.itemsMedian, (s) => s.permanentItemsMedian)}
         format={(v) => String(Math.round(v))}
         holderId={number.holder}
       />
       <Chart
         title="Umsatz"
-        {...series((r) => r.revenueCents, (s) => s.revenueCentsMedian)}
+        {...series((r) => r.revenueCents, (s) => s.revenueCentsMedian, (s) => s.permanentRevenueCentsMedian)}
         format={(v) => euro(Math.round(v))}
         holderId={number.holder}
       />
@@ -71,11 +79,13 @@ function Chart({
   title,
   number,
   median,
+  permanent,
   format,
 }: {
   title: string
   number: Point[]
   median: Point[]
+  permanent: Point[]
   format: (v: number) => string
   holderId: string
 }) {
@@ -85,7 +95,7 @@ function Chart({
   const pad = { top: 12, right: 30, bottom: 28, left: 52 }
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
-  const values = [...number, ...median].map((p) => p.value).filter((v): v is number => v !== null)
+  const values = [...number, ...median, ...permanent].map((p) => p.value).filter((v): v is number => v !== null)
   const max = Math.max(1, ...values) * 1.1
   const x = (i: number) => pad.left + (number.length === 1 ? innerW / 2 : (i / (number.length - 1)) * innerW)
   const y = (v: number) => pad.top + innerH - (v / max) * innerH
@@ -103,12 +113,15 @@ function Chart({
     }
   })
   if (current.length) segments.push(current.join(' '))
-  const medianPath = median
-    .map((p, i) => (p.value === null ? null : `${String(x(i))},${String(y(p.value))}`))
-    .filter((s): s is string => s !== null)
-    .join(' ')
+  const pathOf = (points: Point[]) =>
+    points
+      .map((p, i) => (p.value === null ? null : `${String(x(i))},${String(y(p.value))}`))
+      .filter((s): s is string => s !== null)
+      .join(' ')
+  const medianPath = pathOf(median)
+  const permanentPath = pathOf(permanent)
 
-  const hovered = hover === null ? null : { own: number[hover], med: median[hover] }
+  const hovered = hover === null ? null : { own: number[hover], med: median[hover], perm: permanent[hover] }
 
   return (
     <figure className="m-0">
@@ -123,13 +136,17 @@ function Chart({
             <svg width="18" height="8" aria-hidden><line x1="0" y1="4" x2="18" y2="4" stroke={SERIES_MEDIAN} strokeWidth="2" strokeDasharray="4 3" /></svg>
             Markt-Median
           </span>
+          <span className="flex items-center gap-1">
+            <svg width="18" height="8" aria-hidden><line x1="1" y1="4" x2="17" y2="4" stroke={SERIES_PERMANENT} strokeWidth="2" strokeDasharray="0.5 4" strokeLinecap="round" /></svg>
+            Dauernr.-Median
+          </span>
         </span>
       </figcaption>
       <svg
         viewBox={`0 0 ${String(width)} ${String(height)}`}
         className="w-full"
         role="img"
-        aria-label={`${title}: diese Nummer gegen den Markt-Median über ${String(number.length)} Märkte`}
+        aria-label={`${title}: diese Nummer gegen den Markt-Median und den Median der Dauernummern über ${String(number.length)} Märkte`}
         onMouseLeave={() => { setHover(null); }}
       >
         {ticks.map((t) => (
@@ -146,6 +163,7 @@ function Chart({
           </text>
         ))}
         <polyline points={medianPath} fill="none" stroke={SERIES_MEDIAN} strokeWidth="2" strokeDasharray="4 3" strokeLinejoin="round" />
+        <polyline points={permanentPath} fill="none" stroke={SERIES_PERMANENT} strokeWidth="2" strokeDasharray="0.5 4" strokeLinecap="round" strokeLinejoin="round" />
         {segments.map((s) => (
           <polyline key={s} points={s} fill="none" stroke={SERIES_NUMBER} strokeWidth="2" strokeLinejoin="round" />
         ))}
@@ -182,15 +200,18 @@ function Chart({
         {hovered && (
           <g pointerEvents="none">
             <line x1={x(hover ?? 0)} x2={x(hover ?? 0)} y1={pad.top} y2={pad.top + innerH} stroke={INK_SECONDARY} strokeWidth="1" strokeDasharray="2 2" />
-            <g transform={`translate(${String(Math.min(x(hover ?? 0) + 8, width - 150))}, ${String(pad.top + 4)})`}>
-              <rect width="142" height="44" rx="4" fill="#fcfcfb" stroke={GRID} />
+            <g transform={`translate(${String(Math.min(x(hover ?? 0) + 8, width - 168))}, ${String(pad.top + 4)})`}>
+              <rect width="160" height="56" rx="4" fill="#fcfcfb" stroke={GRID} />
               <text x="6" y="14" fontSize="10" fontWeight="600" fill={INK}>{hovered.own.market}</text>
               <text x="6" y="27" fontSize="10" fill={INK}>
                 Nummer: {hovered.own.value === null ? '—' : format(hovered.own.value)}
                 {hovered.own.match && hovered.own.match !== 'holder' ? ' (andere Person)' : ''}
               </text>
               <text x="6" y="39" fontSize="10" fill={INK}>
-                Median: {hovered.med.value === null ? '—' : format(hovered.med.value)}
+                Markt-Median: {hovered.med.value === null ? '—' : format(hovered.med.value)}
+              </text>
+              <text x="6" y="51" fontSize="10" fill={INK}>
+                Dauernr.-Median: {hovered.perm.value === null ? '—' : format(hovered.perm.value)}
               </text>
             </g>
           </g>
