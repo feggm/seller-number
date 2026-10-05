@@ -234,6 +234,10 @@ export function RegisterTable({
                   {isEditing && h && (
                     <TableRow className="bg-slate-50">
                       <TableCell colSpan={8} className="whitespace-normal">
+                        {/* Without containment the editor's own width (the Marktzahlen table, the
+                            form rows) widens the whole register past its card; contained, it takes
+                            the row's width and its wide parts scroll on their own. */}
+                        <div className="[contain:inline-size]">
                         <EditRow
                           number={n}
                           holder={h}
@@ -243,6 +247,7 @@ export function RegisterTable({
                           statsByMarket={statsByMarket}
                           onDone={() => { setEditingId(null); }}
                         />
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
