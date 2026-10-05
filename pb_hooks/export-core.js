@@ -76,6 +76,15 @@ const sha256Hex = (text) => $security.sha256(text)
 const isBabyVariation = (variation) =>
   /baby/i.test(String(variation ? variation.get('sellerNumberVariationName') || '' : ''))
 
+// The one exception: `sellerNumbers.babyNrOverride` (set in the Verkäuferliste) wins over the
+// variation for that number — for a Babynummer handed to a regular seller, or the reverse.
+const isBabyNumber = (sellerNumber, variation) => {
+  const override = String(sellerNumber.get('babyNrOverride') || '')
+  if (override === 'regular') return false
+  if (override === 'baby') return true
+  return isBabyVariation(variation)
+}
+
 // "2026-11-14 13:00:00.000Z" → "2026-Nov", in Europe/Berlin. This names the consumer's
 // Basisdaten file (`<mode>_db_basisdaten_<YYYY-Mon>.sql`); the month of the market day is the
 // convention there, and no month carries two markets.
@@ -207,7 +216,7 @@ const buildAssignment = ({ eventId, mode, now, limit, offset }) => {
       nr,
       // Set only on rows the Dauernummer register materialised (permanent-numbers-core.js).
       dnr: !!details.get('permanentNumberHolder'),
-      babynr: isBabyVariation(variation),
+      babynr: isBabyNumber(sellerNumber, variation),
       // First market for this person, as far as the trail reaches (see above).
       neu: trailKnown && !seen.has(`${nameHash(details.get('sellerFirstName'))}|${nameHash(details.get('sellerLastName'))}`),
       ma: !!details.get('isStaff'),

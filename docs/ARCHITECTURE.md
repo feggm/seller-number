@@ -44,7 +44,8 @@ The two `*Url` fields hold an address whose content replaces the matching editor
 [URL text fields](#url-text-fields).
 
 A variation whose name matches `/baby/i` (the production one is called "Babynummer") is the
-source of the `babynr` column in the exports — see `export-core.js`. There is no separate flag.
+source of the `babynr` column in the exports — see `export-core.js`. The only exception is
+`sellerNumbers.babyNrOverride` on a single number (see below).
 
 ### 4. sellerNumberPools (`pbc_1981446857`)
 
@@ -62,7 +63,14 @@ window has simply ended)
 ### 5. sellerNumbers (`pbc_492105405`)
 
 `sellerNumberNumber` (number, required), `reservedAt` (date, required),
-`sellerNumberPool` (relation, required), `sellerDetails` (relation → sellerDetails, optional)
+`sellerNumberPool` (relation, required), `sellerDetails` (relation → sellerDetails, optional),
+`babyNrOverride` (select `regular` | `baby`, optional)
+
+`babyNrOverride` overrides the variation-derived `babynr` for this one number — for a
+Babynummer that went to a regular seller outside the system, or the reverse. Empty follows the
+variation. It is set in the Verwaltung's Verkäuferliste ("Bearbeiten"), logged in
+`registerLog`, and gone with the row: a release deletes it, and a fresh reservation recreates
+the row without it (`1789760017`).
 
 ### 6. sellerDetails (`pbc_418131918`)
 
