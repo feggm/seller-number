@@ -46,6 +46,13 @@ export function windowOf(
   const revenueMean = mean(window.map((r) => r.revenueCents))
   const itemsRef = median(medians.map((s) => s.itemsMedian ?? 0))
   const revenueRef = median(medians.map((s) => s.revenueCentsMedian ?? 0))
+  // The same reference among the Dauernummern only — shown beside the market's, not part of
+  // the flag. A market without permanent figures (none sold) just drops out.
+  const windowStats = window.map((r) => statsByMarket.get(r.market))
+  const permItemsRef = median(windowStats.flatMap((s) => (s?.permanentItemsMedian == null ? [] : [s.permanentItemsMedian])))
+  const permRevenueRef = median(
+    windowStats.flatMap((s) => (s?.permanentRevenueCentsMedian == null ? [] : [s.permanentRevenueCentsMedian]))
+  )
   const flag =
     complete && itemsMean !== null && revenueMean !== null && itemsRef !== null && revenueRef !== null
       ? itemsMean < itemsRef && revenueMean < revenueRef
@@ -56,6 +63,6 @@ export function windowOf(
     number.reviewDecision === 'ok' &&
     (number.reviewDecisionMarket === '' || marketKey(number.reviewDecisionMarket) >= marketKey(newestMarket))
   const needsReview = number.reviewFlag && !decisionCurrent
-  return { own, window, complete, itemsMean, revenueMean, itemsRef, revenueRef, flag, newestMarket, decisionCurrent, needsReview }
+  return { own, window, complete, itemsMean, revenueMean, itemsRef, revenueRef, permItemsRef, permRevenueRef, flag, newestMarket, decisionCurrent, needsReview }
 }
 

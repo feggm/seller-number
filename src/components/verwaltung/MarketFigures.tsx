@@ -76,6 +76,9 @@ export function MarketFigures({
             <span className="text-muted-foreground">
               Median der Märkte: {fmt1(w.itemsRef)} Teile, {euro(w.revenueRef === null ? null : Math.round(w.revenueRef))}
             </span>
+            <span className="text-muted-foreground">
+              Median der Dauernummern: {fmt1(w.permItemsRef)} Teile, {euro(w.permRevenueRef === null ? null : Math.round(w.permRevenueRef))}
+            </span>
             <span className={w.flag ? 'rounded bg-red-100 px-2 py-0.5 text-xs text-red-800' : 'rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800'}>
               {w.flag ? 'Review-Flag: beides unter dem Median' : 'kein Anlass zur Review'}
             </span>
@@ -103,6 +106,8 @@ export function MarketFigures({
               <TableHead></TableHead>
               <TableHead className="text-right">Markt-Median Teile</TableHead>
               <TableHead className="text-right">Markt-Median Umsatz</TableHead>
+              <TableHead className="text-right">Dauernr.-Median Teile</TableHead>
+              <TableHead className="text-right">Dauernr.-Median Umsatz</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -146,6 +151,8 @@ export function MarketFigures({
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{s?.itemsMedian ?? '—'}</TableCell>
                   <TableCell className="text-right tabular-nums">{euro(s?.revenueCentsMedian)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s?.permanentItemsMedian ?? '—'}</TableCell>
+                  <TableCell className="text-right tabular-nums">{euro(s?.permanentRevenueCentsMedian)}</TableCell>
                 </TableRow>
               )
             })}
